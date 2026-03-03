@@ -1,0 +1,75 @@
+{
+  "projectType": "infrastructure",
+  "projectName": "Zirconium",
+  "projectDescription": "An opinionated Fedora bootc image featuring Niri window manager and DankMaterialShell for a modern tiling window manager experience.",
+  "theme": "aspen",
+  "primaryColor": "#5B9BD5",
+  "lightColor": "#8BB9E8",
+  "darkColor": "#2E5C8A",
+  "navigation": {
+    "groups": [
+      {
+        "group": "Get Started",
+        "pages": [
+          "introduction",
+          "quickstart"
+        ]
+      },
+      {
+        "group": "Installation",
+        "pages": [
+          "installation/iso",
+          "installation/rebase",
+          "installation/gpu-variants"
+        ]
+      },
+      {
+        "group": "Configuration",
+        "pages": [
+          "configuration/niri",
+          "configuration/dank-material-shell",
+          "configuration/customization"
+        ]
+      },
+      {
+        "group": "Building",
+        "pages": [
+          "building/overview",
+          "building/custom-images",
+          "building/build-scripts"
+        ]
+      },
+      {
+        "group": "Operations",
+        "pages": [
+          "operations/updates",
+          "operations/maintenance",
+          "operations/troubleshooting"
+        ]
+      },
+      {
+        "group": "Reference",
+        "pages": [
+          "reference/build-system",
+          "reference/packages",
+          "reference/system-files"
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Niri scrolling tiling window manager",
+    "DankMaterialShell integration",
+    "Bootc container-based OS updates",
+    "NVIDIA and AMD/Intel GPU support",
+    "ISO and rebase installation methods",
+    "Container-focused development environment"
+  ],
+  "publicApiSurface": [
+    "bootc switch ghcr.io/zirconium-dev/zirconium:latest",
+    "bootc switch ghcr.io/zirconium-dev/zirconium-nvidia:latest",
+    "just iso",
+    "just bootc",
+    "just disk-image"
+  ]
+}
