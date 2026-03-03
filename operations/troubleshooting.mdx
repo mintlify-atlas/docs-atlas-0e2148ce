@@ -1,0 +1,378 @@
+---
+title: 'Troubleshooting'
+description: 'Common issues and how to solve them'
+---
+
+This guide covers common issues you might encounter with Zirconium and how to resolve them.
+
+## Common issues and solutions
+
+<AccordionGroup>
+  <Accordion title="System won't boot after update">
+    If your system fails to boot after an update:
+
+    1. **Reboot and select previous deployment**: At the GRUB menu, select the previous deployment
+    2. **Make the rollback permanent**:
+       ```bash
+       sudo bootc rollback
+       ```
+    3. **Report the issue**: Join our [Discord](https://discord.gg/mmgNQpxwhW) and report what happened
+
+    The previous deployment should boot normally and let you work while the issue is investigated.
+  </Accordion>
+
+  <Accordion title="Display manager not starting">
+    If greetd (the display manager) fails to start:
+
+    1. **Check service status**:
+       ```bash
+       systemctl status greetd
+       ```
+    2. **View logs**:
+       ```bash
+       journalctl -u greetd -b
+       ```
+    3. **Try restarting the service**:
+       ```bash
+       sudo systemctl restart greetd
+       ```
+
+    If the issue persists, you may need to switch to a TTY (Ctrl+Alt+F2) and investigate further.
+  </Accordion>
+
+  <Accordion title="Niri window manager crashes">
+    If Niri crashes or won't start:
+
+    1. **Check Niri logs**:
+       ```bash
+       journalctl --user -u niri -b
+       ```
+    2. **View user session logs**:
+       ```bash
+       journalctl --user -b
+       ```
+    3. **Test Niri configuration**:
+       ```bash
+       niri validate
+       ```
+
+    Configuration files are managed by chezmoi and stored in `~/.config/niri/`.
+  </Accordion>
+
+  <Accordion title="Flatpak apps won't launch">
+    If Flatpak applications fail to start:
+
+    1. **Check Flatpak installation**:
+       ```bash
+       flatpak list
+       ```
+    2. **Repair Flatpak installation**:
+       ```bash
+       flatpak repair
+       ```
+    3. **Reinstall the problematic app**:
+       ```bash
+       flatpak uninstall app-name
+       flatpak install app-name
+       ```
+    4. **Check for permission issues**:
+       ```bash
+       flatpak run --verbose app-name
+       ```
+  </Accordion>
+
+  <Accordion title="Container (Podman/Docker) issues">
+    Common container-related problems:
+
+    **Containers won't start:**
+    ```bash
+    # Check Podman status
+    podman info
+    
+    # Check for storage issues
+    podman system df
+    
+    # Reset Podman storage (WARNING: removes all containers and images)
+    podman system reset
+    ```
+
+    **Permission denied errors:**
+    ```bash
+    # Ensure user is in podman group
+    groups
+    
+    # If not, add user and re-login
+    sudo usermod -aG podman $USER
+    ```
+  </Accordion>
+
+  <Accordion title="Out of disk space">
+    If you're running out of disk space:
+
+    1. **Check disk usage**:
+       ```bash
+       df -h
+       ```
+    2. **Clean up old deployments**:
+       ```bash
+       sudo ostree admin cleanup
+       ```
+    3. **Clean up containers**:
+       ```bash
+       podman system prune -a --volumes
+       ```
+    4. **Clean up Flatpaks**:
+       ```bash
+       flatpak uninstall --unused
+       ```
+    5. **Clean up system logs**:
+       ```bash
+       sudo journalctl --vacuum-time=7d
+       ```
+
+    See the [Maintenance guide](/operations/maintenance) for more details.
+  </Accordion>
+</AccordionGroup>
+
+## NVIDIA-specific issues
+
+If you're using the NVIDIA variant of Zirconium (`zirconium-nvidia`), you may encounter GPU-specific issues.
+
+### Secure boot limitations
+
+<Warning>
+  The NVIDIA kernel module is currently not signed. You **cannot** use secure boot with `zirconium-nvidia` images.
+</Warning>
+
+**Solution**: Disable secure boot in your BIOS/UEFI settings.
+
+For more information, see [GitHub issue #108](https://github.com/zirconium-dev/zirconium/issues/108).
+
+### NVIDIA driver not loading
+
+If your NVIDIA GPU isn't detected or the driver fails to load:
+
+<Steps>
+<Step title="Check if NVIDIA modules are loaded">
+
+Verify NVIDIA kernel modules:
+
+```bash
+lsmod | grep nvidia
+```
+
+You should see `nvidia`, `nvidia_drm`, `nvidia_modeset`, and `nvidia_uvm`.
+
+</Step>
+
+<Step title="Check for nouveau conflicts">
+
+Ensure the nouveau driver is blacklisted:
+
+```bash
+cat /usr/lib/modprobe.d/00-nouveau-blacklist.conf
+```
+
+You should see:
+```
+blacklist nouveau
+blacklist nova-core
+options nouveau modeset=0
+```
+
+</Step>
+
+<Step title="Verify kernel arguments">
+
+Check that NVIDIA kernel arguments are set:
+
+```bash
+cat /usr/lib/bootc/kargs.d/00-nvidia.toml
+```
+
+Should contain:
+```toml
+kargs = ["rd.driver.blacklist=nouveau", "modprobe.blacklist=nouveau", "nvidia-drm.modeset=1"]
+```
+
+</Step>
+
+<Step title="Check NVIDIA service status">
+
+Verify the NVIDIA Container Toolkit CDI service:
+
+```bash
+systemctl status nvctk-cdi.service
+```
+
+This service generates the NVIDIA Container Device Interface (CDI) configuration.
+
+</Step>
+</Steps>
+
+### Black screen on boot with NVIDIA
+
+Zirconium is configured to force-load NVIDIA drivers on boot to prevent black screen issues. This is handled in the initramfs configuration.
+
+If you still experience black screen issues:
+
+1. **Boot into recovery mode**: Select recovery from the GRUB menu
+2. **Check the initramfs configuration**:
+   ```bash
+   cat /usr/lib/dracut/dracut.conf.d/99-nvidia.conf
+   ```
+3. **Rebuild initramfs** (only if needed):
+   ```bash
+   sudo dracut --force --kver $(uname -r)
+   ```
+
+<Note>
+  Zirconium pre-loads Intel (i915) and AMD (amdgpu) drivers alongside NVIDIA to ensure hybrid GPU laptops work correctly with hardware acceleration in browsers.
+</Note>
+
+### NVIDIA in containers
+
+For GPU access in Podman containers, the NVIDIA Container Toolkit is pre-configured:
+
+```bash
+# Run a container with GPU access
+podman run --rm --device nvidia.com/gpu=all nvidia/cuda:12.0-base nvidia-smi
+```
+
+If this doesn't work:
+
+1. **Check CDI configuration**:
+   ```bash
+   cat /etc/cdi/nvidia.yaml
+   ```
+2. **Regenerate CDI config**:
+   ```bash
+   sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml
+   ```
+
+## Boot issues and recovery
+
+### Accessing recovery mode
+
+If your system won't boot normally:
+
+1. **Reboot** and wait for the GRUB bootloader menu
+2. **Select a previous deployment** using arrow keys
+3. **Press 'e'** to edit boot parameters (if needed)
+4. **Boot** by pressing Ctrl+X or F10
+
+### Emergency shell access
+
+If the system fails to reach the login screen:
+
+1. **Press Ctrl+Alt+F2** (or F3-F6) to access a TTY
+2. **Log in** with your username and password
+3. **Investigate** using systemctl and journalctl
+
+### Booting into single-user mode
+
+1. At the GRUB menu, press **'e'** to edit boot parameters
+2. Find the line starting with `linux` or `linuxefi`
+3. Add `systemd.unit=rescue.target` at the end
+4. Press **Ctrl+X** to boot
+
+This boots into a minimal environment for emergency repairs.
+
+## Logs and diagnostics
+
+Collecting proper diagnostic information helps solve problems faster.
+
+### Viewing system logs
+
+Check recent system logs:
+
+```bash
+journalctl -b
+```
+
+Options:
+- `-b`: Current boot only
+- `-b -1`: Previous boot
+- `-p err`: Errors only
+- `-u service-name`: Specific service
+- `--since "1 hour ago"`: Last hour
+
+### Viewing boot logs
+
+See what happened during boot:
+
+```bash
+journalctl -b -p err
+```
+
+### Checking service status
+
+For any systemd service:
+
+```bash
+systemctl status service-name
+```
+
+For user services:
+
+```bash
+systemctl --user status service-name
+```
+
+### Exporting logs for support
+
+When asking for help, export relevant logs:
+
+```bash
+# Export boot logs
+journalctl -b > ~/boot-log.txt
+
+# Export specific service logs
+journalctl -u greetd -b > ~/greetd-log.txt
+
+# Export user session logs
+journalctl --user -b > ~/user-log.txt
+```
+
+Then share these files on Discord or in your support request.
+
+### Hardware information
+
+Collect hardware information:
+
+```bash
+# List PCI devices (includes GPU)
+lspci -v
+
+# CPU information
+lscpu
+
+# Memory information
+free -h
+
+# Disk information
+lsblk
+df -h
+```
+
+## Getting help
+
+If you can't resolve your issue:
+
+1. **Check existing documentation**: Review the guides in this documentation site
+2. **Search GitHub issues**: Look for similar problems at [github.com/zirconium-dev/zirconium/issues](https://github.com/zirconium-dev/zirconium/issues)
+3. **Join our Discord**: Get community support at [discord.gg/mmgNQpxwhW](https://discord.gg/mmgNQpxwhW)
+4. **File a bug report**: Create a detailed issue on GitHub with:
+   - Description of the problem
+   - Steps to reproduce
+   - System information (`bootc status` output)
+   - Relevant logs (see above)
+   - Whether you're using standard or NVIDIA variant
+
+<Tip>
+  When asking for help, always mention:
+  - Which Zirconium variant you're using (standard or NVIDIA)
+  - Output of `bootc status`
+  - Relevant error messages from logs
+  - What you've already tried
+</Tip>

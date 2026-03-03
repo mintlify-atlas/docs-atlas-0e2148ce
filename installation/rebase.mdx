@@ -1,0 +1,154 @@
+---
+title: Rebase from Fedora Atomic
+description: Install Zirconium by rebasing from an existing Fedora Atomic system
+---
+
+If you already have a Fedora Atomic system installed, you can switch to Zirconium using the `bootc switch` command. This is an alternative to installing from ISO.
+
+## Prerequisites
+
+Before rebasing to Zirconium, ensure you have:
+
+- An existing Fedora Atomic installation (such as [Bluefin](https://projectbluefin.io/), Fedora Silverblue, or any other bootc-compatible system)
+- Root or sudo access
+- A stable internet connection
+- Knowledge of your GPU type (AMD/Intel or NVIDIA)
+
+<Note>
+  While we recommend [Bluefin](https://projectbluefin.io/) as a starting point, any Fedora Atomic flavor will work for rebasing to Zirconium.
+</Note>
+
+## Choose your variant
+
+Zirconium offers two variants depending on your GPU:
+
+- **Standard variant**: For AMD and Intel GPUs
+- **NVIDIA variant**: For NVIDIA GTX 16xx and RTX series GPUs
+
+See [GPU variants](/installation/gpu-variants) for more details on choosing the right variant.
+
+## Rebase to Zirconium
+
+<Tabs>
+  <Tab title="Standard (AMD/Intel)">
+    For systems with AMD or Intel GPUs:
+
+    <Steps>
+      <Step title="Switch to Zirconium">
+        Run the bootc switch command:
+
+        ```bash
+        sudo bootc switch ghcr.io/zirconium-dev/zirconium:latest
+        ```
+
+        This will download the Zirconium container image and prepare it for the next boot.
+      </Step>
+
+      <Step title="Reboot your system">
+        ```bash
+        sudo systemctl reboot
+        ```
+
+        Your system will reboot into Zirconium on the next startup.
+      </Step>
+    </Steps>
+  </Tab>
+
+  <Tab title="NVIDIA">
+    For systems with NVIDIA GPUs (GTX 16xx or RTX series):
+
+    <Warning>
+      The NVIDIA variant requires Secure Boot to be disabled. The NVIDIA kernel module is currently unsigned. See the [GPU variants page](/installation/gpu-variants) for more information.
+    </Warning>
+
+    <Steps>
+      <Step title="Disable Secure Boot">
+        Before switching to the NVIDIA variant:
+        1. Reboot into your BIOS/UEFI settings
+        2. Disable Secure Boot
+        3. Save changes and boot back into your system
+      </Step>
+
+      <Step title="Switch to Zirconium NVIDIA">
+        Run the bootc switch command:
+
+        ```bash
+        sudo bootc switch ghcr.io/zirconium-dev/zirconium-nvidia:latest
+        ```
+
+        This will download the NVIDIA-enabled Zirconium image and prepare it for the next boot.
+      </Step>
+
+      <Step title="Reboot your system">
+        ```bash
+        sudo systemctl reboot
+        ```
+
+        Your system will reboot into Zirconium with NVIDIA driver support.
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+## Verify the installation
+
+After rebooting into Zirconium:
+
+<Steps>
+  <Step title="Check bootc status">
+    Verify that you're running Zirconium:
+
+    ```bash
+    sudo bootc status
+    ```
+
+    You should see output showing the Zirconium image reference:
+    - `ghcr.io/zirconium-dev/zirconium:latest` (standard variant)
+    - `ghcr.io/zirconium-dev/zirconium-nvidia:latest` (NVIDIA variant)
+  </Step>
+
+  <Step title="Verify GPU drivers (NVIDIA only)">
+    If you're using the NVIDIA variant, verify the drivers are loaded:
+
+    ```bash
+    nvidia-smi
+    ```
+
+    This should display your GPU information and driver version.
+  </Step>
+
+  <Step title="Update to latest version">
+    Ensure you're running the latest updates:
+
+    ```bash
+    sudo bootc upgrade
+    ```
+
+    If updates are available, reboot to apply them:
+
+    ```bash
+    sudo systemctl reboot
+    ```
+  </Step>
+</Steps>
+
+## Rollback if needed
+
+If you encounter issues with Zirconium, you can roll back to your previous system:
+
+```bash
+sudo bootc rollback
+sudo systemctl reboot
+```
+
+This will revert to your previous Fedora Atomic deployment.
+
+<Note>
+  Zirconium uses bootc's transactional update system, so your previous system state is preserved and can be easily restored.
+</Note>
+
+## Next steps
+
+- Learn about [GPU variants](/installation/gpu-variants) and how to switch between them
+- Customize your Niri and DankMaterialShell configurations
+- Join the [Zirconium Discord](https://discord.gg/mmgNQpxwhW) for support and community discussions

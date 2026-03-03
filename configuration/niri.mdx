@@ -1,0 +1,203 @@
+---
+title: "Niri window manager"
+description: "Configure and customize the Niri scrollable-tiling Wayland window manager in Zirconium"
+---
+
+## Overview
+
+Niri is a scrollable-tiling Wayland compositor that serves as the window manager in Zirconium. It provides a unique tiling experience where workspaces are organized horizontally and windows can be arranged in a scrollable layout.
+
+<Info>
+  Niri is installed from the [yalter/niri-git](https://copr.fedorainfracloud.org/coprs/yalter/niri-git/) COPR repository and runs as the default session manager launched by dms-greeter.
+</Info>
+
+## Configuration files
+
+Niri configuration is managed through several locations:
+
+### User configuration
+
+- **Main config**: `~/.config/niri/config.kdl`
+- **Managed by**: chezmoi (from zdots)
+- **Source**: `/usr/share/zirconium/zdots/`
+
+### System configuration
+
+- **Greeter config**: `/etc/greetd/config.toml`
+- **Session command**: `dms-greeter --command niri`
+
+<Note>
+  Your Niri configuration is automatically managed by chezmoi and synchronized with the system zdots. Any manual changes will be overwritten during OS updates unless you disable automatic dotfile updates.
+</Note>
+
+## Key configuration options
+
+### Environment variables
+
+Zirconium sets up the following environment variables for optimal Niri experience:
+
+<CodeGroup>
+```bash Font settings
+# /etc/profile.d/zirconium-font-settings.sh
+export FREETYPE_PROPERTIES="cff:no-stem-darkening=0 autofitter:no-stem-darkening=0"
+```
+
+```bash Qt theme
+# /etc/profile.d/zirconium-qt-override.sh
+export QT_QPA_PLATFORMTHEME=qt6ct
+```
+</CodeGroup>
+
+### Window manager features
+
+Niri in Zirconium includes:
+
+- **Scrollable tiling**: Horizontal workspace navigation with infinite scrolling
+- **Wayland-native**: Full Wayland support with XWayland fallback via xwayland-satellite
+- **Dynamic layouts**: Automatic window arrangement and resizing
+- **Multi-monitor support**: Native support for multiple displays
+
+## Keybindings and customization
+
+Niri keybindings are defined in `~/.config/niri/config.kdl`. The default configuration is managed through zdots.
+
+### Common operations
+
+While specific keybindings are defined in your zdots configuration, Niri typically supports:
+
+- Window navigation and movement
+- Workspace switching
+- Layout adjustments
+- Application launching via DankMaterialShell
+
+<Accordion title="Resetting Niri configuration">
+  If you need to reset your Niri configuration to defaults:
+
+  ```bash
+  zjust reset-niri
+  ```
+
+  This command will:
+  1. Prompt for confirmation (requires `gum`)
+  2. Reset `~/.config/niri` to the zdots defaults
+  3. Preserve your other configurations
+</Accordion>
+
+## Auto-rotation support
+
+Zirconium includes automatic screen rotation support for convertible devices through the `iio-niri` service.
+
+### Managing auto-rotation
+
+<CodeGroup>
+```bash Check status
+systemctl status --user iio-niri.service
+```
+
+```bash Toggle auto-rotation
+zjust toggle-autorotation
+```
+
+```bash Disable auto-rotation
+systemctl disable --now --user iio-niri.service
+systemctl mask --user iio-niri.service
+```
+
+```bash Enable auto-rotation
+systemctl unmask --user iio-niri.service
+systemctl enable --now --user iio-niri.service
+```
+</CodeGroup>
+
+The service configuration is located at `/usr/lib/systemd/user/iio-niri.service`:
+
+```ini
+[Unit]
+Description=Autorotation service
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+ExecStart=iio-niri
+Restart=on-failure
+RestartSec=1
+
+[Install]
+WantedBy=graphical-session.target
+```
+
+## Customizing Niri
+
+### Direct configuration editing
+
+You can edit Niri configuration directly, but be aware that changes may be overwritten:
+
+```bash
+# Edit your Niri config
+$EDITOR ~/.config/niri/config.kdl
+
+# Reload Niri to apply changes
+niri msg action reload-config
+```
+
+<Warning>
+  Manual changes to `~/.config/niri/config.kdl` will be overwritten when chezmoi updates run (typically on OS updates or when running `zjust zdots-update`).
+</Warning>
+
+### Persistent customization
+
+For persistent Niri customization:
+
+1. **Disable automatic dotfile updates** if you want full control:
+   ```bash
+   zjust toggle-automatic-dotfiles
+   ```
+
+2. **Fork zdots** and customize the Niri configuration there
+
+3. **Use chezmoi templates** to conditionally apply your customizations
+
+See the [customization guide](/configuration/customization) for more details on managing dotfiles.
+
+## Additional tools
+
+Niri integrates with several Zirconium components:
+
+- **DankMaterialShell**: Provides the UI shell, launcher, and panels
+- **udiskie**: Automatic USB device mounting (systemd user service)
+- **fcitx5**: Input method framework for multilingual input
+- **xdg-desktop-portal-gnome**: Desktop integration for file pickers and screenshots
+
+## Troubleshooting
+
+### Niri won't start
+
+Check the greetd logs:
+```bash
+journalctl -u greetd.service -b
+```
+
+### Configuration errors
+
+Validate your Niri configuration:
+```bash
+niri validate ~/.config/niri/config.kdl
+```
+
+### Reset to defaults
+
+Use the built-in reset command:
+```bash
+zjust reset-niri
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="DankMaterialShell" icon="layer-group" href="/configuration/dank-material-shell">
+    Configure the UI shell and launcher
+  </Card>
+  <Card title="Customization" icon="paintbrush" href="/configuration/customization">
+    Learn about dotfiles and theming
+  </Card>
+</CardGroup>

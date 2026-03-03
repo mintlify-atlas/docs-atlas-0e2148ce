@@ -1,0 +1,211 @@
+---
+title: Build system
+description: Complete reference for Zirconium's build system commands and configuration
+---
+
+Zirconium uses [Just](https://github.com/casey/just) as its build system orchestrator. The build system supports multiple output formats including ISO images, bootable disk images, and direct bootc installations.
+
+## Environment variables
+
+The build system recognizes these environment variables:
+
+<ParamField path="IMAGE_FULL" type="string" default="zirconium:latest">
+  The full container image name to build or use for image generation
+</ParamField>
+
+<ParamField path="BUILD_FILESYSTEM" type="string" default="ext4">
+  Filesystem type for disk images. Common values: `ext4`, `btrfs`, `xfs`
+</ParamField>
+
+<ParamField path="BUILD_BASE_DIR" type="string" default=".">
+  Base directory for build outputs and temporary files
+</ParamField>
+
+<ParamField path="BUILD_FLAVOR" type="string">
+  Build flavor variant. Set to `nvidia` to include NVIDIA driver support
+</ParamField>
+
+## Build commands
+
+### iso
+
+Generates a bootable ISO image using [bootc-image-builder](https://github.com/osbuild/bootc-image-builder).
+
+```bash
+just iso [IMAGE]
+```
+
+**Parameters:**
+- `IMAGE` (optional): Container image to use. Defaults to `$IMAGE_FULL` or `zirconium:latest`
+
+**Process:**
+1. Creates `output/` directory for build artifacts
+2. Pulls the specified container image
+3. Runs bootc-image-builder with:
+   - ISO output format
+   - Btrfs root filesystem
+   - librepo enabled for faster repository downloads
+   - Configuration from `iso.toml`
+4. Outputs ISO to `output/` directory
+
+**Requirements:**
+- `iso.toml` configuration file in the working directory
+- Podman with root privileges
+- Sufficient disk space in `/var/lib/containers/storage`
+
+### rootful
+
+Copies a container image from user context to root context for privileged operations.
+
+```bash
+just rootful [IMAGE]
+```
+
+**Parameters:**
+- `IMAGE` (optional): Container image to copy. Defaults to `$IMAGE_FULL` or `zirconium:latest`
+
+**Use case:** Required before running `disk-image` if the image was built in user context.
+
+### bootc
+
+Executes bootc commands within a privileged container.
+
+```bash
+just bootc [ARGS...]
+```
+
+**Parameters:**
+- `ARGS`: Arguments passed directly to the `bootc` command
+
+**Examples:**
+
+<CodeGroup>
+```bash Install to disk
+just bootc install to-disk /dev/sda --wipe
+```
+
+```bash Check status
+just bootc status
+```
+
+```bash Update system
+just bootc update
+```
+</CodeGroup>
+
+**Mounts:**
+- `/sys/fs/selinux` - SELinux filesystem
+- `/etc/containers` - Container configuration
+- `/var/lib/containers` - Container storage
+- `/dev` - Device nodes
+- `$BUILD_BASE_DIR` (or `.`) mounted as `/data`
+
+### disk-image
+
+Creates a bootable disk image file using bootc.
+
+```bash
+just disk-image [FILESYSTEM]
+```
+
+**Parameters:**
+- `FILESYSTEM` (optional): Filesystem type. Defaults to `$BUILD_FILESYSTEM` or `ext4`
+
+**Process:**
+1. Creates a 20GB sparse file at `${BUILD_BASE_DIR}/bootable.img` if it doesn't exist
+2. Installs the system to the image via loopback device
+3. Wipes any existing data on the image
+
+**Example with custom location:**
+
+```bash
+BUILD_BASE_DIR=/mnt/builds just disk-image btrfs
+```
+
+### quick-iterate
+
+Rapid development workflow that builds, transfers, and creates a disk image in one command.
+
+```bash
+just quick-iterate
+```
+
+**Process:**
+1. Builds container image: `podman build -t zirconium:latest .`
+2. Copies image to root context: `just rootful`
+3. Creates disk image in `/tmp`: `BUILD_BASE_DIR=/tmp just disk-image`
+
+**Use case:** Fast iteration during development. Uses `/tmp` to avoid cluttering the working directory.
+
+## Build stages
+
+The Zirconium build process uses a multi-stage script system located in `build_files/`:
+
+### Naming convention
+
+Scripts follow the pattern: `NN-name-STAGE.sh` where:
+- `NN` = execution order (00-99)
+- `name` = component name
+- `STAGE` = one of: `pre`, `fetch`, `post`
+
+### Stage types
+
+<Accordion title="pre - Pre-installation setup">
+  Runs before package installation. Used for repository configuration and system preparation.
+
+  **Example:** `00-base-pre.sh` - System initialization
+</Accordion>
+
+<Accordion title="fetch - Package installation">
+  Installs packages via DNF. COPR repositories are enabled temporarily for specific packages.
+
+  **Examples:**
+  - `00-base-fetch.sh` - Base system packages
+  - `01-theme-fetch.sh` - Desktop environment and theme packages
+  - `02-nvidia-fetch.sh` - NVIDIA drivers (when `BUILD_FLAVOR=nvidia`)
+  - `99-misc-fetch.sh` - Flatpak repository setup
+</Accordion>
+
+<Accordion title="post - Post-installation configuration">
+  Configures installed packages, copies system files, and enables services.
+
+  **Examples:**
+  - `00-base-post.sh` - Copies system files, configures systemd
+  - `01-theme-post.sh` - Theme setup, font cache, service presets
+  - `02-nvidia-post.sh` - NVIDIA driver compilation and SELinux setup
+</Accordion>
+
+## Configuration files
+
+### iso.toml
+
+Configuration for bootc-image-builder when generating ISO images. Should include:
+
+- Installation defaults
+- Kernel arguments
+- User setup
+- Network configuration
+
+### Containerfile/Dockerfile
+
+The main container build file that orchestrates the build stages by executing scripts from `build_files/` in sequence.
+
+## Build options
+
+### NVIDIA support
+
+To build with NVIDIA driver support:
+
+```bash
+BUILD_FLAVOR=nvidia podman build -t zirconium:nvidia .
+```
+
+This triggers `02-nvidia-fetch.sh` and `02-nvidia-post.sh` to install:
+- NVIDIA kernel modules via DKMS
+- CUDA libraries
+- nvidia-container-toolkit
+- Proprietary driver stack
+
+### Cache management
+
+DNF cache is enabled during builds for faster rebuilds. The cache is automatically cleaned on build completion.

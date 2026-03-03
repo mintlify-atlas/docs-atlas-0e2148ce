@@ -1,0 +1,484 @@
+---
+title: Build scripts reference
+description: Understanding the build_files/ directory structure and build phase system
+---
+
+## Build scripts structure
+
+Zirconium's build process is organized into modular shell scripts in the `build_files/` directory. Each script follows a naming convention that indicates its phase and purpose:
+
+```
+NN-name-phase.sh
+```
+
+Where:
+- **NN**: Numeric prefix (00, 01, 02, 99) determines execution order
+- **name**: Descriptive component name (base, theme, nvidia, misc)
+- **phase**: Execution phase (pre, fetch, post)
+
+## Build phases
+
+Scripts are organized into three distinct phases, each with specific purposes and constraints:
+
+### Pre phase
+
+Executes before any package installation.
+
+**Characteristics:**
+- No network access (`--network=none`)
+- Temporary filesystems for `/var`, `/tmp`, `/run`, `/boot`
+- Used for system preparation and cleanup
+
+**Use cases:**
+- Removing unwanted packages
+- Initial filesystem setup
+- Preparing for package installation
+
+### Fetch phase
+
+Handles package installation and external resource retrieval.
+
+**Characteristics:**
+- Network access enabled
+- Package manager cache persisted (`--mount=type=cache,dst=/var/cache/libdnf5`)
+- Optimized for DNF operations
+
+**Use cases:**
+- Installing packages via DNF
+- Enabling COPR repositories
+- Downloading external resources
+- Cloning git repositories
+
+### Post phase
+
+Performs configuration after packages are installed.
+
+**Characteristics:**
+- No network access (`--network=none`)
+- Files are immutable at this point
+- Final configuration and validation
+
+**Use cases:**
+- Copying configuration files
+- Enabling systemd services
+- Running post-install setup tasks
+- Validating installation
+
+## Script reference
+
+### 00-base-pre.sh
+
+**Phase:** Pre  
+**Purpose:** Remove unnecessary base packages
+
+Removes packages that conflict with or are unnecessary for Zirconium:
+
+```bash
+dnf -y remove \
+  console-login-helper-messages \
+  chrony \
+  sssd* \
+  qemu-user-static* \
+  toolbox
+```
+
+**Removed packages:**
+- **console-login-helper-messages**: Login message system (replaced by custom solution)
+- **chrony**: NTP daemon (systemd-timesyncd is used instead)
+- **sssd**: System Security Services Daemon (not needed)
+- **qemu-user-static**: QEMU user emulation (build-time only dependency)
+- **toolbox**: Fedora's container tool (conflicts with Zirconium's approach)
+
+### 00-base-fetch.sh
+
+**Phase:** Fetch  
+**Purpose:** Install core system packages and hardware support
+
+Installs essential system components:
+
+<Steps>
+  <Step title="Configure DNF">
+    Enables package cache persistence:
+    ```bash
+    dnf -y install 'dnf5-command(config-manager)'
+    dnf config-manager setopt keepcache=1
+    ```
+  </Step>
+
+  <Step title="Install system packages">
+    Adds NetworkManager, firmware, and utilities:
+    - Network management (NetworkManager + plugins)
+    - Firmware packages (alsa, wifi, bluetooth)
+    - Hardware support (CUPS, fwupd, fprintd)
+    - System tools (rsync, unzip, wireguard-tools)
+  </Step>
+
+  <Step title="Add Universal Blue tools">
+    Installs uupd (Universal Update) from COPR:
+    ```bash
+    dnf -y copr enable ublue-os/packages
+    dnf -y --enablerepo copr:copr.fedorainfracloud.org:ublue-os:packages install uupd
+    ```
+  </Step>
+
+  <Step title="Architecture-specific packages">
+    On x86_64, installs virtualization and thermal management:
+    ```bash
+    dnf install -y virtualbox-guest-additions thermald powerstat
+    ```
+  </Step>
+</Steps>
+
+<Note>
+  The script uses `-x PackageKit*` to exclude PackageKit, which conflicts with Zirconium's update mechanism.
+</Note>
+
+### 00-base-post.sh
+
+**Phase:** Post  
+**Purpose:** Configure base system services and settings
+
+Key operations:
+
+```bash
+# Copy system configuration files
+cp -avf "/ctx/files"/. /
+
+# Configure update service
+sed -i 's|uupd|& --disable-module-distrobox|' /usr/lib/systemd/system/uupd.service
+sed -i 's|^ExecStart=.*|ExecStart=/usr/bin/bootc update --quiet|' /usr/lib/systemd/system/bootc-fetch-apply-updates.service
+```
+
+**Configured services:**
+- `auditd.service`: System auditing
+- `bootc-fetch-apply-updates.service`: Automatic OS updates
+- `brew-setup.service`: Homebrew initialization
+- `firewalld.service`: Firewall management
+- `systemd-timesyncd.service`: Time synchronization
+- `uupd.timer`: Universal update checks
+
+### 01-theme-fetch.sh
+
+**Phase:** Fetch  
+**Purpose:** Install Niri window manager, DMS, and desktop applications
+
+This is the largest build script, installing all desktop components:
+
+<Steps>
+  <Step title="Zirconium packages">
+    From `zirconium/packages` COPR:
+    ```bash
+    dnf -y install matugen iio-niri valent-git
+    ```
+  </Step>
+
+  <Step title="Niri window manager">
+    From `yalter/niri-git` COPR:
+    ```bash
+    dnf -y install --setopt=install_weak_deps=False niri
+    niri --version | grep -E "niri [[:digit:]]*\.[[:digit:]]* (.*\.git\..*)"
+    ```
+    The version check ensures the git version is installed.
+  </Step>
+
+  <Step title="DankMaterialShell">
+    From `avengemedia/dms-git` COPR:
+    ```bash
+    dnf -y install dms dms-cli dms-greeter dgop dsearch
+    ```
+  </Step>
+
+  <Step title="Desktop applications">
+    Core desktop utilities:
+    - Terminal: `foot`
+    - File manager: `nautilus`
+    - Display: `brightnessctl`, `ddcutil`
+    - Input: `fcitx5-mozc`, `input-remapper`
+    - Audio: `pipewire`, `wireplumber`, `playerctl`
+    - Tools: `chezmoi`, `fastfetch`, `git-core`, `just`
+  </Step>
+
+  <Step title="Multimedia codecs">
+    From negativo17 repository:
+    ```bash
+    dnf -y install --enablerepo=fedora-multimedia \
+      ffmpeg libavcodec @multimedia gstreamer1-plugins-* ffmpegthumbnailer
+    ```
+  </Step>
+
+  <Step title="Fonts and emoji">
+    ```bash
+    dnf install -y \
+      default-fonts-core-emoji \
+      google-noto-color-emoji-fonts \
+      glibc-all-langpacks
+    dnf install -y --enablerepo=terra maple-fonts
+    ```
+  </Step>
+
+  <Step title="External resources">
+    Clones default dotfiles and installs extensions:
+    ```bash
+    git clone "https://github.com/zirconium-dev/zdots.git" /usr/share/zirconium/zdots
+    ```
+  </Step>
+</Steps>
+
+### 01-theme-post.sh
+
+**Phase:** Post  
+**Purpose:** Configure desktop services and install assets
+
+Key configurations:
+
+```bash
+# Fix PAM configuration for fingerprint auth
+install -Dpm0644 -t /usr/lib/pam.d/ /usr/share/quickshell/dms/assets/pam/*
+
+# Configure greetd for GNOME Keyring
+sed -i -e '/gnome_keyring.so/ s/-auth/auth/ ; /gnome_keyring.so/ s/-session/session/' /etc/pam.d/greetd
+
+# Install visual assets
+install -Dpm0644 -t /usr/share/plymouth/themes/spinner/ /ctx/assets/logos/watermark.png
+install -Dpm0644 -t /usr/share/zirconium/skel/Pictures/Wallpapers/ /ctx/assets/wallpapers/*
+```
+
+**Enabled services:**
+- `greetd.service`: Login manager
+- `dms.service`: DankMaterialShell (user)
+- `fcitx5.service`: Input method (user)
+- `foot-server.socket`: Terminal server (user)
+- `gnome-keyring-daemon.socket`: Keyring (user)
+- `iio-niri.service`: Screen rotation (user)
+
+### 02-nvidia-fetch.sh
+
+**Phase:** Fetch  
+**Purpose:** Install NVIDIA drivers (conditional)
+
+<Warning>
+  This script only executes when `BUILD_FLAVOR` contains "nvidia".
+</Warning>
+
+Installation process:
+
+```bash
+# Check if NVIDIA build
+if [[ ! "${BUILD_FLAVOR}" =~ "nvidia" ]] ; then
+    exit 0
+fi
+
+# Install compiler for DKMS
+dnf -y install gcc-c++
+
+# Enable Terra NVIDIA repository
+dnf install -y --enablerepo=terra terra-release-nvidia
+
+# Install NVIDIA drivers
+dnf -y install --enablerepo=terra-nvidia \
+    dkms-nvidia \
+    nvidia-driver-cuda \
+    nvidia-driver \
+    nvidia-settings
+```
+
+**Kernel compatibility patches:**
+
+For specific driver versions (e.g., 590.48.01), applies compatibility patches:
+
+```bash
+if [ "${NVIDIA_VERSION}" == "590.48.01" ] ; then
+    curl -fsSLo cachy.patch https://raw.githubusercontent.com/.../kernel-6.19.patch
+    git apply < cachy.patch
+fi
+```
+
+### 02-nvidia-post.sh
+
+**Phase:** Post  
+**Purpose:** Build NVIDIA kernel modules and configure driver loading
+
+Key operations:
+
+<Steps>
+  <Step title="Detect kernel version">
+    ```bash
+    KERNEL_VERSION="$(find "/usr/lib/modules" -maxdepth 1 -type d ! -path "/usr/lib/modules" -exec basename '{}' ';' | sort | tail -n 1)"
+    ```
+  </Step>
+
+  <Step title="Build DKMS modules">
+    ```bash
+    NVIDIA_VERSION="$(basename "$(find /usr/src -iname "*nvidia-*" -type d -maxdepth 1)" | cut -d- -f2)"
+    dkms install -m "nvidia/$NVIDIA_VERSION" -k "${KERNEL_VERSION}"
+    ```
+  </Step>
+
+  <Step title="Blacklist Nouveau">
+    ```bash
+    tee /usr/lib/modprobe.d/00-nouveau-blacklist.conf <<'EOF'
+    blacklist nouveau
+    options nouveau modeset=0
+    EOF
+    ```
+  </Step>
+
+  <Step title="Configure kernel arguments">
+    ```bash
+    tee /usr/lib/bootc/kargs.d/00-nvidia.toml <<'EOF'
+    kargs = ["rd.driver.blacklist=nouveau", "nvidia-drm.modeset=1"]
+    EOF
+    ```
+  </Step>
+
+  <Step title="Fix dracut configuration">
+    ```bash
+    sed -i 's/omit_drivers/force_drivers/g' /usr/lib/dracut/dracut.conf.d/99-nvidia.conf
+    sed -i 's/ nvidia / i915 amdgpu nvidia /g' /usr/lib/dracut/dracut.conf.d/99-nvidia.conf
+    ```
+  </Step>
+</Steps>
+
+### 99-misc-fetch.sh
+
+**Phase:** Fetch  
+**Purpose:** Add Flathub repository configuration
+
+Simple script that downloads the Flathub repo configuration:
+
+```bash
+mkdir -p "/usr/share/flatpak/remotes.d/"
+curl --retry 3 -Lo "/usr/share/flatpak/remotes.d/flathub.flatpakrepo" \
+  "https://dl.flathub.org/repo/flathub.flatpakrepo"
+```
+
+### 99-misc-post.sh
+
+**Phase:** Post  
+**Purpose:** Final system configuration and branding
+
+Operations:
+
+<Steps>
+  <Step title="Update OS release information">
+    Customizes `/usr/lib/os-release` with Zirconium branding:
+    ```bash
+    sed -i -f - /usr/lib/os-release <<EOF
+    s|^NAME=.*|NAME="Zirconium"|
+    s|^PRETTY_NAME=.*|PRETTY_NAME="Zirconium"|
+    s|^VERSION_CODENAME=.*|VERSION_CODENAME="Juno"|
+    EOF
+    ```
+  </Step>
+
+  <Step title="Configure Flatpak">
+    ```bash
+    rm -rf /usr/lib/systemd/system/flatpak-add-fedora-repos.service
+    systemctl enable flatpak-add-flathub-repos.service
+    ```
+  </Step>
+
+  <Step title="Create symlinks">
+    ```bash
+    ln -s /var/usrlocal /usr/local
+    ln -s /var/opt /
+    ```
+  </Step>
+
+  <Step title="Validate critical files">
+    Ensures required files exist:
+    ```bash
+    stat /usr/share/pki/containers/zirconium.pub
+    stat /usr/bin/uupd
+    stat /usr/lib/systemd/system/uupd.service
+    ```
+  </Step>
+</Steps>
+
+### 99-dracut.sh
+
+**Phase:** Special (final)  
+**Purpose:** Generate the initramfs
+
+Creates a reproducible initramfs with ostree support:
+
+```bash
+KERNEL_VERSION="$(find "/usr/lib/modules" -maxdepth 1 -type d ! -path "/usr/lib/modules" -exec basename '{}' ';' | sort | tail -n 1)"
+export DRACUT_NO_XATTR=1
+dracut --no-hostonly --kver "$KERNEL_VERSION" --reproducible --zstd -v --add ostree -f "/usr/lib/modules/$KERNEL_VERSION/initramfs.img"
+chmod 0600 "/usr/lib/modules/${KERNEL_VERSION}/initramfs.img"
+```
+
+**Options explained:**
+- `--no-hostonly`: Create generic initramfs (not hardware-specific)
+- `--reproducible`: Ensure deterministic output
+- `--zstd`: Use Zstandard compression
+- `--add ostree`: Include ostree support for bootc
+- `-f`: Force overwrite existing initramfs
+
+## Adding custom build steps
+
+To add your own build phase:
+
+<Steps>
+  <Step title="Create your script">
+    ```bash
+    cat > build_files/03-myapp-fetch.sh <<'EOF'
+    #!/bin/bash
+    set -xeuo pipefail
+    
+    dnf -y install mypackage
+    EOF
+    
+    chmod +x build_files/03-myapp-fetch.sh
+    ```
+  </Step>
+
+  <Step title="Add to Containerfile">
+    ```dockerfile
+    RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
+        --mount=type=cache,dst=/var/cache/libdnf5 \
+        /ctx/build/03-myapp-fetch.sh
+    ```
+  </Step>
+
+  <Step title="Create post-install script (optional)">
+    ```bash
+    cat > build_files/03-myapp-post.sh <<'EOF'
+    #!/bin/bash
+    set -xeuo pipefail
+    
+    systemctl enable myapp.service
+    EOF
+    
+    chmod +x build_files/03-myapp-post.sh
+    ```
+  </Step>
+
+  <Step title="Add post phase to Containerfile">
+    ```dockerfile
+    RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
+        --mount=type=tmpfs,dst=/var \
+        --network=none \
+        /ctx/build/03-myapp-post.sh
+    ```
+  </Step>
+</Steps>
+
+<Tip>
+  Follow the existing script patterns:
+  - Use `set -xeuo pipefail` at the start
+  - Disable repos after enabling them: `dnf copr enable ... && dnf copr disable ...`
+  - Use `--enablerepo=` for one-time package installations
+  - Validate critical installations with version checks or `stat` commands
+</Tip>
+
+## Best practices
+
+1. **Minimize layers**: Combine related operations in a single script
+2. **Use cache mounts**: Leverage `/var/cache/libdnf5` cache for faster rebuilds
+3. **Fail fast**: Use `set -euo pipefail` to catch errors immediately
+4. **Validate installations**: Check critical files exist before proceeding
+5. **Document changes**: Add comments explaining non-obvious operations
+6. **Test incrementally**: Build after each new script to catch issues early
+7. **Respect phases**: Keep package installation in fetch, configuration in post

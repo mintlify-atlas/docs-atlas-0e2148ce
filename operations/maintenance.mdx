@@ -1,0 +1,261 @@
+---
+title: 'Maintenance'
+description: 'Keep your Zirconium system running smoothly'
+---
+
+Regular maintenance helps keep your Zirconium system healthy and ensures optimal performance. Most maintenance tasks are automated, but understanding them helps you manage your system effectively.
+
+## System maintenance overview
+
+Zirconium handles most maintenance automatically:
+
+- **Flatpak updates**: Managed by `uupd` (Universal Update) service
+- **Container storage**: Automatically cleaned up by systemd timers
+- **Deployment cleanup**: Old bootc deployments are removed to save space
+- **System logs**: Rotated automatically by journald
+
+## Container storage management
+
+If you use Podman or Docker for containers, storage can accumulate over time.
+
+### Checking container storage usage
+
+View storage used by containers:
+
+```bash
+podman system df
+```
+
+This shows:
+- Images: Container images you've pulled or built
+- Containers: Stopped and running containers
+- Volumes: Persistent data volumes
+- Build cache: Cached layers from image builds
+
+### Cleaning up container storage
+
+<Steps>
+<Step title="Remove unused containers">
+
+Remove all stopped containers:
+
+```bash
+podman container prune
+```
+
+Confirm when prompted to free up space.
+
+</Step>
+
+<Step title="Remove unused images">
+
+Remove dangling images (untagged images no longer used):
+
+```bash
+podman image prune
+```
+
+To remove all unused images (not just dangling ones):
+
+```bash
+podman image prune -a
+```
+
+</Step>
+
+<Step title="Clean up volumes and cache">
+
+Remove unused volumes:
+
+```bash
+podman volume prune
+```
+
+For a complete cleanup including build cache:
+
+```bash
+podman system prune -a --volumes
+```
+
+</Step>
+</Steps>
+
+<Warning>
+  `podman system prune -a` removes **all** unused images, not just dangling ones. Make sure you don't need to restart any containers that use these images.
+</Warning>
+
+## Flatpak management
+
+Zirconium includes automatic Flatpak management services.
+
+### Understanding Flatpak services
+
+Zirconium includes these systemd services for Flatpak:
+
+- **`flatpak-add-flathub-repos.service`**: Adds Flathub repository on first boot
+- **`flatpak-preinstall.service`**: Installs pre-configured Flatpaks on first boot
+- **`uupd.timer`**: Regularly updates Flatpaks and system packages
+
+### Manual Flatpak updates
+
+While updates are automatic, you can manually update Flatpaks:
+
+```bash
+flatpak update
+```
+
+To update without prompts:
+
+```bash
+flatpak update -y
+```
+
+### Cleaning up Flatpak storage
+
+Remove unused Flatpak runtimes and extensions:
+
+```bash
+flatpak uninstall --unused
+```
+
+This safely removes runtimes that are no longer needed by any installed applications.
+
+### Checking Flatpak storage usage
+
+View storage used by Flatpaks:
+
+```bash
+du -sh ~/.local/share/flatpak /var/lib/flatpak
+```
+
+<Tip>
+  Run `flatpak list --app` to see only installed applications, or `flatpak list` to see applications and runtimes.
+</Tip>
+
+## Cleaning up old deployments
+
+bootc keeps previous deployments for rollback, but you may want to clean up old ones to save space.
+
+### Checking deployment usage
+
+View all deployments and their storage:
+
+```bash
+bootc status
+```
+
+Deployments are stored in `/sysroot/ostree/deploy/default/deploy/`.
+
+### Manual deployment cleanup
+
+bootc automatically keeps a limited number of deployments. To manually clean up:
+
+```bash
+sudo ostree admin cleanup
+```
+
+This removes old deployments while keeping:
+- Current deployment (the one you're running)
+- Previous deployment (for rollback)
+- Staged deployment (pending update)
+
+<Note>
+  You cannot remove the currently booted deployment or the staged deployment.
+</Note>
+
+## Managing system logs
+
+### Checking log storage usage
+
+View space used by system logs:
+
+```bash
+journalctl --disk-usage
+```
+
+### Cleaning up old logs
+
+Limit logs to the last 7 days:
+
+```bash
+sudo journalctl --vacuum-time=7d
+```
+
+Limit logs to 500MB:
+
+```bash
+sudo journalctl --vacuum-size=500M
+```
+
+### Persistent log configuration
+
+To permanently limit log storage, edit `/etc/systemd/journald.conf`:
+
+```ini
+[Journal]
+SystemMaxUse=500M
+SystemKeepFree=1G
+MaxRetentionSec=7day
+```
+
+Then restart the journal service:
+
+```bash
+sudo systemctl restart systemd-journald
+```
+
+## Disk space overview
+
+Get a complete overview of disk usage:
+
+```bash
+df -h
+```
+
+For a detailed breakdown of what's using space:
+
+```bash
+sudo du -h --max-depth=1 / 2>/dev/null | sort -h
+```
+
+<Tip>
+  Most space issues on bootc systems come from:
+  - Multiple bootc deployments
+  - Container images and volumes
+  - User home directories
+  - Flatpak applications and runtimes
+</Tip>
+
+## Automated maintenance tasks
+
+Zirconium runs these maintenance tasks automatically:
+
+<AccordionGroup>
+  <Accordion title="Universal Update (uupd)">
+    Runs regularly via `uupd.timer` to update Flatpaks and check for system updates. Check status:
+    
+    ```bash
+    systemctl status uupd.timer
+    systemctl list-timers uupd.timer
+    ```
+    
+    Note: uupd is configured with `--disable-module-distrobox` as set in `/usr/lib/systemd/system/uupd.service`.
+  </Accordion>
+
+  <Accordion title="bootc automatic updates">
+    Checks for system updates weekly via `bootc-fetch-apply-updates.timer`. Updates are staged but not applied until you reboot. Check status:
+    
+    ```bash
+    systemctl status bootc-fetch-apply-updates.timer
+    systemctl list-timers bootc-fetch-apply-updates.timer
+    ```
+  </Accordion>
+
+  <Accordion title="systemd-tmpfiles cleanup">
+    Automatically cleans up temporary files in `/tmp` and `/var/tmp`. Check configuration:
+    
+    ```bash
+    systemctl status systemd-tmpfiles-clean.timer
+    ```
+  </Accordion>
+</AccordionGroup>

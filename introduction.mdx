@@ -1,0 +1,104 @@
+---
+title: Introduction
+description: An opinionated Fedora bootc image featuring Niri window manager and DankMaterialShell for a modern tiling workflow
+---
+
+# Do you like how I dance? I've got Zirconium pants!
+
+Zirconium is an opinionated Fedora bootc image that combines the power of the Niri scrollable tiling window manager with DankMaterialShell to create a usable, out-of-the-box tiling window manager experience.
+
+<img src="https://github.com/user-attachments/assets/73e4e017-893b-46fc-b6ce-351c176d444c" alt="Zirconium desktop screenshot" />
+
+## What makes Zirconium special?
+
+<CardGroup cols={2}>
+  <Card title="Modern tiling workflow" icon="grid" href="#tiling-window-management">
+    Built on Niri's innovative scrollable tiling paradigm with DankMaterialShell integration
+  </Card>
+  <Card title="Container-native architecture" icon="container" href="#bootc-based-system">
+    Powered by bootc for atomic updates and immutable infrastructure
+  </Card>
+  <Card title="Developer-focused" icon="code" href="#built-for-developers">
+    Optimized for container-focused development workflows and daily usage
+  </Card>
+  <Card title="Ready to use" icon="rocket" href="/quickstart">
+    Pre-configured with sensible defaults so you can start working immediately
+  </Card>
+</CardGroup>
+
+## Tiling window management
+
+Zirconium uses [Niri](https://github.com/YaLTeR/niri), a scrollable-tiling Wayland compositor. Unlike traditional tiling window managers, Niri organizes windows in an infinitely scrollable horizontal layout, making it natural to work with multiple workspaces and applications simultaneously.
+
+DankMaterialShell provides a beautiful, Material Design-inspired shell environment that integrates seamlessly with Niri, giving you:
+
+- Modern, polished UI components
+- Quick access panels and launchers
+- System status monitoring
+- Customizable theming with `matugen`
+
+## bootc-based system
+
+Zirconium is built on Fedora's bootc (bootable container) technology, which means:
+
+- **Atomic updates**: Your entire system is an OCI container image
+- **Reliable rollbacks**: Boot into previous versions if something goes wrong
+- **Reproducible builds**: The exact same image can be deployed anywhere
+- **Easy customization**: Rebase to different variants or create your own
+
+The system is built from this Containerfile and distributed via container registries:
+
+```dockerfile
+FROM quay.io/fedora/fedora-bootc:44
+
+# Install Niri from COPR
+RUN dnf -y copr enable yalter/niri-git && \
+    dnf -y install niri
+
+# Install DankMaterialShell components
+RUN dnf -y copr enable avengemedia/dms-git && \
+    dnf -y install dms dms-cli dms-greeter
+```
+
+You switch between versions using simple bootc commands:
+
+```bash
+sudo bootc switch ghcr.io/zirconium-dev/zirconium:latest
+```
+
+## Built for developers
+
+Zirconium is designed primarily for container-focused development and day-to-day usage. Out of the box, you get:
+
+- **Development tools**: Git, chezmoi for dotfile management, and essential build tools
+- **Container runtime**: Ready for Docker/Podman workflows
+- **Homebrew support**: Integrated via [ublue-os/brew](https://github.com/ublue-os/brew)
+- **Modern terminal**: Foot terminal with sensible defaults
+- **Just commands**: Common system tasks automated via Justfile
+
+<Note>
+While Zirconium supports gaming, it's optimized for development workflows. For a fully gaming-focused experience, consider [Bazzite](https://bazzite.gg/).
+</Note>
+
+## GPU support
+
+Zirconium comes in multiple variants to support different hardware:
+
+- **Standard image**: AMD and Intel GPUs with open-source drivers
+- **NVIDIA image**: GTX 16xx and RTX series support with proprietary drivers
+
+<Warning>
+The NVIDIA variant currently doesn't support Secure Boot because the kernel module is not signed. See [issue #108](https://github.com/zirconium-dev/zirconium/issues/108) for tracking.
+</Warning>
+
+## Customization
+
+You have full control over your Niri and DankMaterialShell configuration. While Zirconium ships with opinionated defaults that are updated with OS updates, you're free to customize everything to your preferences.
+
+Configuration files can be managed with chezmoi or directly edited in your home directory.
+
+## Get started
+
+Ready to try Zirconium? Head over to the [Quickstart guide](/quickstart) to install it in minutes.
+
+Join the community on [Discord](https://discord.gg/mmgNQpxwhW) to get help, share your setup, or contribute to the project.

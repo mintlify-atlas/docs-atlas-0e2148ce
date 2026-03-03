@@ -1,0 +1,201 @@
+---
+title: GPU variants
+description: Understand the differences between Zirconium GPU variants and choose the right one for your hardware
+---
+
+Zirconium provides two variants optimized for different GPU types. Choosing the correct variant ensures optimal performance and driver support for your system.
+
+## Available variants
+
+### Standard variant
+
+**Image reference:** `ghcr.io/zirconium-dev/zirconium:latest`
+
+The standard variant is designed for:
+- AMD GPUs
+- Intel integrated graphics
+- Systems without dedicated GPUs
+
+**Features:**
+- Uses open-source Mesa drivers
+- Full Secure Boot support
+- Wayland acceleration via Niri window manager
+- Optimized for container-focused development and daily use
+
+### NVIDIA variant
+
+**Image reference:** `ghcr.io/zirconium-dev/zirconium-nvidia:latest`
+
+The NVIDIA variant includes proprietary drivers for:
+- NVIDIA GTX 16xx series (GTX 1650, 1660, etc.)
+- NVIDIA RTX series (RTX 2000, 3000, 4000, 5000 series)
+
+**Features:**
+- Proprietary NVIDIA kernel modules
+- CUDA support
+- Wayland support via Niri
+- Gaming and compute workload optimization
+
+<Warning>
+  **Secure Boot limitation:** The NVIDIA variant currently does not support Secure Boot. The NVIDIA kernel module is not signed, which prevents the system from booting with Secure Boot enabled.
+  
+  You must disable Secure Boot in your BIOS/UEFI settings before using this variant. Track progress on this issue: [zirconium#108](https://github.com/zirconium-dev/zirconium/issues/108)
+</Warning>
+
+## How to choose the right variant
+
+Use this guide to determine which variant is right for you:
+
+<Tabs>
+  <Tab title="I have AMD/Intel GPU">
+    **Use the standard variant**
+
+    - Download: [ISO installation page](/installation/iso)
+    - Rebase command: `sudo bootc switch ghcr.io/zirconium-dev/zirconium:latest`
+
+    The standard variant provides excellent performance with AMD and Intel GPUs using the open-source Mesa drivers.
+  </Tab>
+
+  <Tab title="I have NVIDIA GPU">
+    **Check your GPU model first**
+
+    The NVIDIA variant supports:
+    - GTX 16xx series and newer
+    - All RTX series cards
+
+    **If your GPU is supported:**
+    1. Disable Secure Boot in BIOS/UEFI
+    2. Download the NVIDIA ISO or use the NVIDIA rebase command
+    3. Install/rebase as normal
+
+    **If your GPU is older (GTX 10xx, 900 series, etc.):**
+    - The NVIDIA variant may not support your card
+    - Consider using the standard variant with Nouveau drivers (limited performance)
+    - Gaming performance will be significantly reduced
+  </Tab>
+
+  <Tab title="I'm not sure">
+    **Identify your GPU:**
+
+    ```bash
+    lspci | grep -i vga
+    ```
+
+    Or for more detail:
+
+    ```bash
+    lspci -v | grep -A 10 -i vga
+    ```
+
+    - If you see "NVIDIA" and have a GTX 16xx or RTX card → use NVIDIA variant
+    - If you see "AMD" or "Intel" → use standard variant
+    - If you see an older NVIDIA card (GTX 10xx or older) → use standard variant
+  </Tab>
+</Tabs>
+
+## Switching between variants
+
+You can switch between variants at any time using the `bootc switch` command:
+
+### Switch to standard variant
+
+If you're currently running the NVIDIA variant and want to switch to the standard variant:
+
+<Steps>
+  <Step title="Run the switch command">
+    ```bash
+    sudo bootc switch ghcr.io/zirconium-dev/zirconium:latest
+    ```
+  </Step>
+
+  <Step title="Reboot your system">
+    ```bash
+    sudo systemctl reboot
+    ```
+  </Step>
+
+  <Step title="Re-enable Secure Boot (optional)">
+    After confirming the standard variant works correctly, you can re-enable Secure Boot in your BIOS/UEFI settings if desired.
+  </Step>
+</Steps>
+
+### Switch to NVIDIA variant
+
+If you're currently running the standard variant and want to switch to the NVIDIA variant:
+
+<Steps>
+  <Step title="Disable Secure Boot">
+    1. Reboot into BIOS/UEFI settings (usually F2, F12, Del, or Esc during boot)
+    2. Disable Secure Boot
+    3. Save changes and reboot into your system
+  </Step>
+
+  <Step title="Run the switch command">
+    ```bash
+    sudo bootc switch ghcr.io/zirconium-dev/zirconium-nvidia:latest
+    ```
+  </Step>
+
+  <Step title="Reboot your system">
+    ```bash
+    sudo systemctl reboot
+    ```
+  </Step>
+
+  <Step title="Verify NVIDIA drivers">
+    After booting into the NVIDIA variant, verify the drivers are loaded:
+
+    ```bash
+    nvidia-smi
+    ```
+
+    You should see your GPU information and driver version.
+  </Step>
+</Steps>
+
+<Note>
+  Thanks to bootc's transactional update system, you can always roll back to your previous variant if something goes wrong:
+  
+  ```bash
+  sudo bootc rollback
+  sudo systemctl reboot
+  ```
+</Note>
+
+## Performance considerations
+
+### Standard variant
+- Excellent performance for desktop compositing and video playback
+- Full Wayland support with hardware acceleration
+- Great for development, browsing, and general productivity
+- Good for gaming on AMD GPUs (native driver performance)
+
+### NVIDIA variant
+- Best performance for NVIDIA GPU compute workloads
+- CUDA support for machine learning and scientific computing
+- Optimal gaming performance on NVIDIA hardware
+- Wayland support through the proprietary driver
+
+## Frequently asked questions
+
+<AccordionGroup>
+  <Accordion title="Can I use the standard variant with an NVIDIA GPU?">
+    Yes, but you'll be using the open-source Nouveau drivers, which have significantly limited performance compared to the proprietary drivers. Gaming and compute workloads will be severely impacted.
+  </Accordion>
+
+  <Accordion title="Why doesn't the NVIDIA variant support Secure Boot?">
+    The NVIDIA kernel module is currently unsigned, which prevents it from loading when Secure Boot is enabled. This is a known limitation being tracked in [issue #108](https://github.com/zirconium-dev/zirconium/issues/108).
+  </Accordion>
+
+  <Accordion title="Will my GTX 1080 work with the NVIDIA variant?">
+    The NVIDIA variant officially supports GTX 16xx series and newer. GTX 10xx series (like the 1080) may work but are not officially supported. Test at your own discretion.
+  </Accordion>
+
+  <Accordion title="Can I switch variants without reinstalling?">
+    Yes! Use the `bootc switch` command to change variants. See the "Switching between variants" section above.
+  </Accordion>
+</AccordionGroup>
+
+## Need help?
+
+Join the [Zirconium Discord](https://discord.gg/mmgNQpxwhW) for support with GPU variant selection and troubleshooting.

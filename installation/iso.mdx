@@ -1,0 +1,136 @@
+---
+title: Install from ISO
+description: Download and install Zirconium using the official ISO images
+---
+
+The recommended way to install Zirconium is using our pre-built ISO images. This provides a clean installation experience with automatic setup of bootc.
+
+## Download ISO
+
+Choose the appropriate ISO variant for your hardware:
+
+<Tabs>
+  <Tab title="AMD64">
+    <CodeGroup>
+      ```bash AMD/Intel GPUs
+      curl -LO https://isos.zirconium.gay/zirconium-isos/zirconium-amd64.iso
+      curl -LO https://isos.zirconium.gay/zirconium-isos/zirconium-amd64.iso-CHECKSUM
+      ```
+
+      ```bash NVIDIA GPUs
+      curl -LO https://isos.zirconium.gay/zirconium-isos/zirconium-nvidia-amd64.iso
+      curl -LO https://isos.zirconium.gay/zirconium-isos/zirconium-nvidia-amd64.iso-CHECKSUM
+      ```
+    </CodeGroup>
+
+    ### Direct download links
+    - **[AMD/Intel GPUs](https://isos.zirconium.gay/zirconium-isos/zirconium-amd64.iso)** ([Checksum](https://isos.zirconium.gay/zirconium-isos/zirconium-amd64.iso-CHECKSUM))
+    - **[NVIDIA GPUs (GTX 16xx and RTX series)](https://isos.zirconium.gay/zirconium-isos/zirconium-nvidia-amd64.iso)** ([Checksum](https://isos.zirconium.gay/zirconium-isos/zirconium-nvidia-amd64.iso-CHECKSUM))
+  </Tab>
+
+  <Tab title="ARM64">
+    <CodeGroup>
+      ```bash AMD/Intel GPUs
+      curl -LO https://isos.zirconium.gay/zirconium-isos/zirconium-arm64.iso
+      curl -LO https://isos.zirconium.gay/zirconium-isos/zirconium-arm64.iso-CHECKSUM
+      ```
+
+      ```bash NVIDIA GPUs
+      curl -LO https://isos.zirconium.gay/zirconium-isos/zirconium-nvidia-arm64.iso
+      curl -LO https://isos.zirconium.gay/zirconium-isos/zirconium-nvidia-arm64.iso-CHECKSUM
+      ```
+    </CodeGroup>
+
+    ### Direct download links
+    - **[AMD/Intel GPUs](https://isos.zirconium.gay/zirconium-isos/zirconium-arm64.iso)** ([Checksum](https://isos.zirconium.gay/zirconium-isos/zirconium-arm64.iso-CHECKSUM))
+    - **[NVIDIA GPUs (GTX 16xx and RTX series)](https://isos.zirconium.gay/zirconium-isos/zirconium-nvidia-arm64.iso)** ([Checksum](https://isos.zirconium.gay/zirconium-isos/zirconium-nvidia-arm64.iso-CHECKSUM))
+  </Tab>
+</Tabs>
+
+<Warning>
+  If you have an NVIDIA GPU, make sure to download the NVIDIA variant. The NVIDIA images only support GTX 16xx series and newer RTX cards.
+</Warning>
+
+## Verify checksum
+
+Before installation, verify the ISO integrity:
+
+```bash
+sha256sum -c zirconium-amd64.iso-CHECKSUM
+```
+
+Replace `zirconium-amd64.iso` with your downloaded ISO filename.
+
+## Installation steps
+
+<Steps>
+  <Step title="Create bootable media">
+    Write the ISO to a USB drive using your preferred tool:
+
+    ```bash
+    sudo dd if=zirconium-amd64.iso of=/dev/sdX bs=4M status=progress oflag=sync
+    ```
+
+    Replace `/dev/sdX` with your USB device path. You can also use graphical tools like Ventoy, Rufus, or balenaEtcher.
+  </Step>
+
+  <Step title="Boot from USB">
+    Restart your computer and boot from the USB drive. You may need to:
+    - Access your BIOS/UEFI settings (usually F2, F12, Del, or Esc during boot)
+    - Disable Secure Boot if using the NVIDIA variant
+    - Select the USB drive as the boot device
+  </Step>
+
+  <Step title="Run the installer">
+    The Anaconda installer will start automatically. Follow the on-screen prompts to:
+    - Select your language and keyboard layout
+    - Configure your disk partitioning
+    - Set your timezone
+    - Create a user account
+    
+    The installer will automatically configure bootc to pull the appropriate Zirconium image based on your chosen ISO variant.
+  </Step>
+
+  <Step title="Complete installation">
+    Once the installation is complete, remove the USB drive and reboot your system.
+  </Step>
+</Steps>
+
+## Post-installation
+
+After your first boot into Zirconium:
+
+<Steps>
+  <Step title="Verify bootc status">
+    Check that bootc is properly configured:
+
+    ```bash
+    sudo bootc status
+    ```
+
+    You should see the Zirconium container image reference.
+  </Step>
+
+  <Step title="Update to latest version">
+    Ensure you're running the latest version:
+
+    ```bash
+    sudo bootc upgrade
+    sudo systemctl reboot
+    ```
+  </Step>
+
+  <Step title="Configure your environment">
+    Zirconium comes with pre-configured dotfiles for Niri and DankMaterialShell. You can customize these configurations to your liking.
+
+    <Note>
+      While Zirconium updates may include dotfile changes, you're free to customize them. The update process may overwrite some configurations, so consider backing up your customizations.
+    </Note>
+  </Step>
+</Steps>
+
+## Next steps
+
+- Learn about [GPU variants](/installation/gpu-variants) to understand the differences between standard and NVIDIA images
+- Explore [rebasing](/installation/rebase) if you want to switch between variants later
+- Join the [Zirconium Discord](https://discord.gg/mmgNQpxwhW) for support and community discussions

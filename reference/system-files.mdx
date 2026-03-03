@@ -1,0 +1,420 @@
+---
+title: System files
+description: System file structure, configuration files, custom scripts, and services in Zirconium
+---
+
+Zirconium includes a comprehensive set of system files that configure the desktop environment, enable custom scripts, and manage systemd services.
+
+All system files are located in `system_files/` in the source tree and are copied to the root filesystem during the build process via `00-base-post.sh`.
+
+## Directory structure
+
+System files are organized following the Filesystem Hierarchy Standard (FHS):
+
+```
+system_files/
+├── etc/                    # System configuration
+│   ├── containers/         # Container registry configuration
+│   ├── greetd/             # Display manager configuration
+│   ├── profile.d/          # Shell profile scripts
+│   └── xdg/                # XDG configuration
+├── usr/
+│   ├── bin/                # Custom executables
+│   ├── lib/
+│   │   ├── pam.d/          # PAM configuration
+│   │   ├── systemd/        # Systemd units and presets
+│   │   ├── sysusers.d/     # System user definitions
+│   │   └── tmpfiles.d/     # Temporary file management
+│   └── share/
+│       ├── flatpak/        # Flatpak configuration
+│       ├── greetd/         # Greeter environment
+│       ├── pki/            # Public key infrastructure
+│       └── zirconium/      # Zirconium assets and tools
+```
+
+## Configuration files
+
+### /etc/greetd/config.toml
+
+Greetd display manager configuration:
+
+```toml
+[general]
+service = "greetd-spawn"
+
+[terminal]
+vt = 1
+
+[default_session]
+command = "dms-greeter --command niri"
+user = "greeter"
+```
+
+Launches DankMaterialShell greeter on VT1, which starts Niri after login.
+
+### /etc/containers/policy.json
+
+Container image signature verification policy for secure container operations.
+
+### /etc/containers/registries.d/zirconium-dev.yaml
+
+Container registry configuration for Zirconium development images with signature verification.
+
+### /etc/xdg/xdg-terminals.list
+
+Defines the default terminal emulator for XDG terminal launching:
+
+```
+foot
+```
+
+### /etc/profile.d/
+
+Shell profile scripts executed for all users:
+
+<Accordion title="zmotd.sh">
+  Displays the Zirconium message of the day on shell startup.
+  
+  ```bash
+  /usr/bin/zmotd
+  ```
+</Accordion>
+
+<Accordion title="zirconium-font-settings.sh">
+  Configures FreeType font rendering:
+  
+  ```bash
+  export FREETYPE_PROPERTIES="cff:no-stem-darkening=0 autofitter:no-stem-darkening=0"
+  ```
+  
+  Disables stem darkening for consistent font rendering.
+</Accordion>
+
+<Accordion title="zirconium-qt-override.sh">
+  Sets Qt platform theme:
+  
+  ```bash
+  export QT_QPA_PLATFORMTHEME=qt6ct
+  ```
+  
+  Enables qt6ct for Qt application theming.
+</Accordion>
+
+<Accordion title="zfetch.sh">
+  Automatically runs `zfetch` (system info display) on shell startup.
+</Accordion>
+
+<Accordion title="fcitx5.sh">
+  Configures fcitx5 input method environment variables.
+</Accordion>
+
+## Custom scripts
+
+Located in `/usr/bin/`, these scripts provide Zirconium-specific functionality.
+
+### zmotd
+
+Displays the Zirconium welcome banner with helpful commands:
+
+```bash
+#!/usr/bin/env bash
+if test ! -e "${XDG_CONFIG_HOME:-$HOME/.config}/zirconium/no-show-user-motd" ; then
+  cat <<EOF
+   Welcome to Zirconium!
+
+   Command                          │ Description
+ ─────────────────────────────────────┼────────────────────────────────────
+   zjust toggle-user-motd           │ Toggle this banner on/off
+   zjust zdots-update               │ Update your unmodified dotfiles
+   zjust update-greeter             │ Update your greeter with modifications from your current user
+   zjust reset-niri                 │ Reset niri to the default configuration
+EOF
+fi
+```
+
+Can be disabled by running `zjust toggle-user-motd` or creating:
+```
+~/.config/zirconium/no-show-user-motd
+```
+
+### zjust
+
+Wrapper for the Just command runner that uses Zirconium's justfile:
+
+```bash
+#!/usr/bin/env bash
+just -f /usr/share/zirconium/just/00-start.just "${@}"
+```
+
+Provides access to Zirconium-specific commands. See system_files/usr/share/zirconium/just/00-start.just:1 for available commands.
+
+### zfetch
+
+Custom system information display using hyfetch:
+
+```bash
+#!/usr/bin/env bash
+hyfetch --ascii-file=/usr/share/zirconium/zirconium.txt "${@}"
+```
+
+Displays system info with Zirconium ASCII art.
+
+### glorpfetch
+
+Alternative fetch utility with custom ASCII art:
+
+```bash
+hyfetch --ascii-file=/usr/share/zirconium/glorp.txt
+```
+
+### rechunker-group-fix
+
+Fixes group database issues when rebasing from rechunked images. See system_files/usr/lib/systemd/system/rechunker-group-fix.service:1 for details.
+
+Prevents black screen issues caused by corrupted `/etc/group` when migrating from images using `nss-altfiles`.
+
+## Systemd services
+
+### System services
+
+Located in `/usr/lib/systemd/system/`:
+
+<Accordion title="flatpak-preinstall.service">
+  Installs pre-configured Flatpak applications on first boot.
+  
+  - **Type:** oneshot
+  - **Runs after:** network-online.target
+  - **Creates:** `/var/lib/zirconium/preinstall-finished` marker file
+  - **Retry:** 3 attempts with 30-second delay
+</Accordion>
+
+<Accordion title="flatpak-add-flathub-repos.service">
+  Adds Flathub repositories to the system.
+</Accordion>
+
+<Accordion title="rechunker-group-fix.service">
+  Fixes group database corruption from legacy rechunked images.
+  
+  - **Type:** oneshot
+  - **Runs before:** systemd-user-sessions.service
+  - **Actions:**
+    1. Recreates `/etc/gshadow`
+    2. Runs `systemd-sysusers`
+    3. Executes `rechunker-group-fix`
+    4. Creates tmpfiles
+</Accordion>
+
+### User services
+
+Located in `/usr/lib/systemd/user/`:
+
+<Accordion title="dms.service">
+  DankMaterialShell compositor service.
+</Accordion>
+
+<Accordion title="chezmoi-init.service">
+  Initializes chezmoi dotfile management on first login.
+  
+  ```ini
+  [Unit]
+  Description=Initializes Chezmoi if directory is missing
+  ConditionPathExists=!%h/.config/zirconium/chezmoi
+  
+  [Service]
+  ExecStart=mkdir -p %h/.config/zirconium/chezmoi
+  ExecStart=touch %h/.config/zirconium/chezmoi/chezmoi.toml
+  ExecStart=chezmoi apply -S /usr/share/zirconium/zdots --config %h/.config/zirconium/chezmoi/chezmoi.toml
+  Type=oneshot
+  ```
+  
+  Applies zdots configuration from `/usr/share/zirconium/zdots`.
+</Accordion>
+
+<Accordion title="chezmoi-update.timer & chezmoi-update.service">
+  Periodically updates dotfiles from zdots repository.
+</Accordion>
+
+<Accordion title="fcitx5.service">
+  fcitx5 input method framework.
+</Accordion>
+
+<Accordion title="foot-server.service & foot-server.socket">
+  Foot terminal server for fast terminal spawning.
+</Accordion>
+
+<Accordion title="gnome-keyring-daemon.service & gnome-keyring-daemon.socket">
+  GNOME Keyring for credential storage.
+</Accordion>
+
+<Accordion title="gcr-ssh-agent.service & gcr-ssh-agent.socket">
+  SSH agent using GNOME Crypto (gcr).
+</Accordion>
+
+<Accordion title="iio-niri.service">
+  Automatic screen rotation based on accelerometer input.
+</Accordion>
+
+<Accordion title="udiskie.service">
+  Automount daemon for removable media.
+</Accordion>
+
+## Systemd presets
+
+### System presets
+
+`/usr/lib/systemd/system-preset/01-zirconium.preset`:
+
+```
+enable auditd.service
+enable bootc-fetch-apply-updates.timer
+enable brew-setup.service
+enable firewalld.service
+enable flatpak-preinstall.service
+enable greetd.service
+enable systemd-resolved.service
+enable systemd-timesyncd.service
+enable tailscaled.service
+enable uupd.timer
+```
+
+`/usr/lib/systemd/system-preset/91-resolved-default.preset` enables DNS resolution.
+
+### User presets
+
+`/usr/lib/systemd/user-preset/01-zirconium.preset`:
+
+```
+enable chezmoi-init.service
+enable chezmoi-update.timer
+enable dms.service
+enable fcitx5.service
+enable foot-server.service
+enable foot-server.socket
+enable gnome-keyring-daemon.service
+enable gnome-keyring-daemon.socket
+enable gcr-ssh-agent.service
+enable gcr-ssh-agent.socket
+enable iio-niri.service
+enable udiskie.service
+```
+
+## System user definitions
+
+### /usr/lib/sysusers.d/dms-greeter.conf
+
+Creates the `greeter` system user for the DMS greeter service.
+
+## Tmpfiles configuration
+
+### /usr/lib/tmpfiles.d/99-dms-greeter.conf
+
+Configures temporary files and directories for the DMS greeter.
+
+### /usr/lib/tmpfiles.d/resolved-default.conf
+
+Sets up systemd-resolved temporary files.
+
+## PAM configuration
+
+### /usr/lib/pam.d/greetd-spawn
+
+PAM configuration for the greetd spawner. Modified in `01-theme-post.sh` to fix GNOME Keyring authentication:
+
+```bash
+sed -i -e '/gnome_keyring.so/ s/-auth/auth/ ; /gnome_keyring.so/ s/-session/session/' /etc/pam.d/greetd
+```
+
+Quickshell PAM assets are also installed to `/usr/lib/pam.d/` to fix long login times with fingerprint authentication.
+
+## Zirconium assets
+
+### /usr/share/zirconium/
+
+<Accordion title="zdots/">
+  Default dotfiles cloned from https://github.com/zirconium-dev/zdots.git
+  
+  Managed by chezmoi and applied to user home directories.
+</Accordion>
+
+<Accordion title="just/00-start.just">
+  Zirconium justfile with user commands:
+  
+  - `zdots-update` - Update dotfiles
+  - `zdots-reset FILE` - Reset specific file
+  - `zdots-override-all` - Reset all configuration
+  - `toggle-user-motd` - Enable/disable MOTD
+  - `toggle-autorotation` - Enable/disable screen rotation
+  - `toggle-automatic-dotfiles` - Enable/disable chezmoi auto-update
+  - `toggle-fcitx5` - Enable/disable input method
+  - `preinstalled-flatpaks` - Reinstall Flatpak apps
+  - `reset-niri` - Reset Niri configuration
+  - `update-greeter` - Sync greeter with user config
+  - `set-accent-color` - Set GNOME accent color
+  
+  Also imports Universal Blue justfiles:
+  - `/usr/share/ublue-os/just/update.just`
+  - `/usr/share/ublue-os/just/shared.just`
+  - `/usr/share/ublue-os/just/default.just`
+</Accordion>
+
+<Accordion title="shell/pure.bash">
+  Pure bash prompt configuration sourced in `/etc/bashrc`.
+</Accordion>
+
+<Accordion title="zirconium.txt & glorp.txt">
+  ASCII art files for `zfetch` and `glorpfetch`.
+</Accordion>
+
+<Accordion title="fastfetch.jsonc">
+  Default fastfetch configuration.
+</Accordion>
+
+<Accordion title="skel/Pictures/Wallpapers/">
+  Default wallpapers installed to skeleton directory.
+</Accordion>
+
+<Accordion title="pixmaps/logo-z.svg">
+  Zirconium logo graphic.
+</Accordion>
+
+### /usr/share/greetd/greetd-spawn.pam_env.conf
+
+Environment variables for the greeter spawn process.
+
+### /usr/share/pki/containers/
+
+Container registry signing keys:
+- `jackrabbit.pub`
+- `hawaii.pub`
+
+### /usr/share/flatpak/preinstall.d/zirconium.preinstall
+
+List of Flatpak applications to pre-install on first boot.
+
+### /usr/share/fish/vendor_conf.d/zmotd.fish
+
+Fish shell configuration to display MOTD.
+
+### /usr/share/plymouth/themes/spinner/watermark.png
+
+Custom Plymouth boot splash watermark installed from `/ctx/assets/logos/watermark.png`.
+
+## Shell completions
+
+Generated in `01-theme-post.sh` for the `zjust` command:
+
+- **Bash:** `/usr/share/bash-completion/completions/zjust`
+- **Zsh:** `/usr/share/zsh/site-functions/_zjust`
+- **Fish:** `/usr/share/fish/vendor_completions.d/zjust.fish`
+
+Completions are generated from `just --completions` and modified to work with the `zjust` wrapper.
+
+## Font cache
+
+Font cache is rebuilt during build:
+
+```bash
+fc-cache --force --really-force --system-only --verbose
+```
+
+Ensures all installed fonts (including Maple Fonts from Terra) are available.

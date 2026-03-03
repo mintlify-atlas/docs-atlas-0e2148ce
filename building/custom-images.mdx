@@ -1,0 +1,269 @@
+---
+title: Building custom images
+description: How to create and customize your own Zirconium-based OS images
+---
+
+## Prerequisites
+
+Before building custom Zirconium images, ensure you have:
+
+- Podman or Docker installed
+- Root/sudo access for bootable image creation
+- At least 20GB free disk space
+- Fedora or compatible Linux distribution (for ISO/disk creation)
+
+## Basic image build
+
+The simplest way to build a Zirconium container image:
+
+```bash
+podman build -t zirconium:latest .
+```
+
+This creates a standard Zirconium image tagged as `zirconium:latest` in your local container storage.
+
+### Building NVIDIA variant
+
+For systems with NVIDIA graphics cards:
+
+```bash
+podman build --build-arg BUILD_FLAVOR=nvidia -t zirconium:nvidia .
+```
+
+The `BUILD_FLAVOR` argument controls which build scripts execute. When set to "nvidia", the NVIDIA driver installation scripts run during the build.
+
+## Using Justfile commands
+
+Zirconium includes a Justfile with convenient build automation commands. These recipes handle complex operations with sensible defaults.
+
+### Creating bootable ISO
+
+Generate a bootable ISO installer:
+
+```bash
+just iso
+```
+
+This command:
+1. Pulls the specified image (default: `zirconium:latest`)
+2. Runs bootc-image-builder in a privileged container
+3. Creates an ISO with Btrfs root filesystem
+4. Outputs the ISO to the `./output` directory
+
+<CodeGroup>
+
+```bash Default image
+just iso
+```
+
+```bash Custom image
+IMAGE_FULL=zirconium:nvidia just iso
+```
+
+```bash From registry
+IMAGE_FULL=ghcr.io/zirconium-dev/zirconium:latest just iso
+```
+
+</CodeGroup>
+
+### Creating disk images
+
+Build a raw disk image for deployment:
+
+```bash
+just disk-image
+```
+
+This creates a 20GB disk image at `./bootable.img` with ext4 filesystem by default.
+
+<Steps>
+  <Step title="Create the image file">
+    The recipe uses `fallocate` to create a sparse 20GB file:
+    ```bash
+    fallocate -l 20G bootable.img
+    ```
+  </Step>
+
+  <Step title="Install bootc to disk">
+    Runs `bootc install to-disk` via loopback mount:
+    ```bash
+    just bootc install to-disk --via-loopback /data/bootable.img --filesystem ext4 --wipe
+    ```
+  </Step>
+</Steps>
+
+### Filesystem options
+
+Change the root filesystem type:
+
+<CodeGroup>
+
+```bash ext4 (default)
+just disk-image
+```
+
+```bash Btrfs
+BUILD_FILESYSTEM=btrfs just disk-image
+```
+
+```bash XFS
+BUILD_FILESYSTEM=xfs just disk-image
+```
+
+</CodeGroup>
+
+### Quick iteration workflow
+
+For rapid development and testing:
+
+```bash
+just quick-iterate
+```
+
+This recipe:
+1. Builds the image locally: `podman build -t zirconium:latest .`
+2. Transfers it to root account: `just rootful`
+3. Creates a disk image in `/tmp`: `BUILD_BASE_DIR=/tmp just disk-image`
+
+<Warning>
+  The `quick-iterate` command uses `/tmp` for disk images, which will be lost on reboot. This is intentional for fast testing cycles.
+</Warning>
+
+## Modifying the Containerfile
+
+### Adding new build layers
+
+To add custom software or configuration, insert a new RUN layer:
+
+```dockerfile
+RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
+    --mount=type=tmpfs,dst=/var \
+    --mount=type=tmpfs,dst=/tmp \
+    --mount=type=tmpfs,dst=/run \
+    --mount=type=tmpfs,dst=/boot \
+    /ctx/build/03-custom-fetch.sh
+```
+
+<Note>
+  Place your custom layer between the theme layer (01) and misc layer (99) to maintain logical build order.
+</Note>
+
+### Changing the base image
+
+To use a different Fedora version:
+
+```dockerfile
+FROM quay.io/fedora/fedora-bootc:45
+```
+
+### Adding files to the context
+
+Include additional resources in the build context:
+
+```dockerfile
+FROM scratch AS ctx
+
+COPY assets /assets
+COPY build_files /build
+COPY system_files /files
+COPY my_custom_files /custom  # Add this line
+COPY cosign.pub /files/usr/share/pki/containers/zirconium.pub
+```
+
+Then access them in build scripts via `/ctx/custom/`.
+
+## Testing custom builds
+
+### Local container testing
+
+Run your built image as a container:
+
+```bash
+podman run -it --rm zirconium:latest /bin/bash
+```
+
+### Validation checks
+
+Verify the image passes bootc requirements:
+
+```bash
+podman run --rm zirconium:latest bootc container lint
+```
+
+### Testing in a VM
+
+After creating a disk image:
+
+```bash
+qemu-system-x86_64 \
+  -enable-kvm \
+  -m 4G \
+  -smp 2 \
+  -drive file=bootable.img,format=raw \
+  -display gtk
+```
+
+### ISO testing
+
+Test the ISO in a VM:
+
+```bash
+qemu-system-x86_64 \
+  -enable-kvm \
+  -m 4G \
+  -smp 2 \
+  -cdrom output/bootiso/install.iso \
+  -boot d \
+  -drive file=test-disk.img,format=raw \
+  -display gtk
+```
+
+## Environment variables
+
+Customize builds with environment variables:
+
+| Variable | Description | Default |
+|----------|-------------|----------|
+| `IMAGE_FULL` | Full image reference | `zirconium:latest` |
+| `BUILD_FLAVOR` | Build variant (empty or "nvidia") | `` |
+| `BUILD_FILESYSTEM` | Root filesystem type | `ext4` |
+| `BUILD_BASE_DIR` | Output directory for disk images | `.` (current dir) |
+
+<Tip>
+  Environment variables can be set inline with commands:
+  ```bash
+  BUILD_FLAVOR=nvidia IMAGE_FULL=my-custom:latest just iso
+  ```
+</Tip>
+
+## Troubleshooting
+
+### Build fails during package installation
+
+If DNF operations fail:
+1. Check your internet connection
+2. Verify COPR repositories are accessible
+3. Try clearing the cache: `podman build --no-cache`
+
+### NVIDIA build issues
+
+If NVIDIA drivers fail to build:
+- Ensure you're using a compatible kernel version
+- Check `/usr/src/nvidia-*` for driver source availability
+- Review the patch application in `02-nvidia-fetch.sh:26-30` for kernel compatibility
+
+### ISO creation fails
+
+If `just iso` fails:
+1. Ensure you have root/sudo access
+2. Check that `/var/lib/containers/storage` is accessible
+3. Verify the image exists: `sudo podman images | grep zirconium`
+4. Make sure `output/` directory exists and is writable
+
+### Disk image won't boot
+
+If the disk image fails to boot:
+- Verify the image was created successfully: `ls -lh bootable.img`
+- Check it's at least 1GB: Images smaller than this may be incomplete
+- Ensure you used `--wipe` flag or the disk was empty
+- Try a different filesystem: `BUILD_FILESYSTEM=btrfs just disk-image`

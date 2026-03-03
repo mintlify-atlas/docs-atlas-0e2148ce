@@ -1,0 +1,161 @@
+---
+title: 'Updates'
+description: 'How to keep your Zirconium system up to date'
+---
+
+Zirconium uses bootc for atomic, image-based updates. Updates are downloaded and staged in the background, then applied on the next reboot.
+
+## How bootc updates work
+
+bootc (Boot Container) is an image-based update system that treats your operating system as an immutable container image:
+
+- Your system boots from a container image stored in `/usr/lib/bootc`
+- Updates download new container images without modifying your running system
+- Each update creates a new deployment that you boot into after restarting
+- Previous deployments are kept for easy rollback
+- All changes are atomic - either fully applied or not at all
+
+<Note>
+  Zirconium is configured to automatically stage updates weekly. Updates are downloaded and prepared but won't take effect until you reboot.
+</Note>
+
+## Checking for updates
+
+To check if updates are available:
+
+```bash
+bootc status
+```
+
+This command shows:
+- Your current deployment version
+- Available updates
+- Staged updates (if any)
+- Previously booted deployments
+
+To manually check for new updates:
+
+```bash
+sudo bootc upgrade --check
+```
+
+## Applying updates
+
+Zirconium automatically checks for updates weekly using a systemd timer (`bootc-fetch-apply-updates.timer`). Updates are staged automatically but require a reboot to take effect.
+
+<Steps>
+<Step title="Manually update your system">
+
+To manually fetch and stage updates:
+
+```bash
+sudo bootc upgrade
+```
+
+This downloads the latest Zirconium image and stages it for the next boot.
+
+</Step>
+
+<Step title="Reboot to apply">
+
+After updates are staged, reboot your system:
+
+```bash
+systemctl reboot
+```
+
+Your system will boot into the new deployment with all updates applied.
+
+</Step>
+</Steps>
+
+<Tip>
+  Check `systemctl status bootc-fetch-apply-updates.service` to see when the last automatic update check ran.
+</Tip>
+
+## Rolling back updates
+
+If an update causes issues, you can easily roll back to a previous deployment.
+
+<Steps>
+<Step title="List available deployments">
+
+View all bootable deployments:
+
+```bash
+bootc status
+```
+
+Look for the "Staged" and "Rollback" deployments in the output.
+
+</Step>
+
+<Step title="Roll back at boot">
+
+During system boot, the GRUB bootloader shows a menu. Select the previous deployment to boot into the older version.
+
+</Step>
+
+<Step title="Make rollback permanent">
+
+If you boot into a previous deployment and want to make it permanent:
+
+```bash
+sudo bootc rollback
+```
+
+This sets the previous deployment as default for future boots.
+
+</Step>
+</Steps>
+
+<Warning>
+  Deployments are automatically cleaned up to save disk space. If you need to keep a specific deployment, pin it before cleanup runs.
+</Warning>
+
+## Update frequency and release channels
+
+Zirconium follows a continuous delivery model:
+
+- **Update frequency**: Automatic checks run weekly (configured in `bootc-fetch-apply-updates.timer`)
+- **Release channel**: `latest` - receives all updates as they're published
+- **Container registry**: `ghcr.io/zirconium-dev/zirconium:latest` (or `zirconium-nvidia:latest`)
+
+### Understanding the update policy
+
+Zirconium is configured with `AutomaticUpdatePolicy=stage` in `/etc/rpm-ostreed.conf`, which means:
+
+- Updates are automatically downloaded and staged
+- Updates are **not** automatically applied (no automatic reboots)
+- You control when to reboot and apply updates
+
+### Checking which image you're running
+
+To see your current Zirconium image:
+
+```bash
+bootc status
+```
+
+Look for the image reference, which shows:
+- Base image: `ghcr.io/zirconium-dev/zirconium:latest` or `zirconium-nvidia:latest`
+- Image digest: A unique hash identifying the exact build
+- Build date: When the image was created
+
+### Switching between standard and NVIDIA variants
+
+If you need to switch between the standard and NVIDIA images:
+
+```bash
+# Switch to NVIDIA variant
+sudo bootc switch ghcr.io/zirconium-dev/zirconium-nvidia:latest
+
+# Switch to standard variant
+sudo bootc switch ghcr.io/zirconium-dev/zirconium:latest
+```
+
+Then reboot to apply the change.
+
+<Warning>
+  Switching images requires downloading the entire image. Ensure you have a stable internet connection and sufficient disk space.
+</Warning>

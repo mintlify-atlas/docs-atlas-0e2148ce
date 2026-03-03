@@ -1,80 +1,236 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart
+description: Get Zirconium up and running in minutes with bootc rebase or ISO installation
 ---
 
-## Get started in three steps
+# Get started with Zirconium
 
-Get your documentation site running locally and make your first customization.
+Zirconium can be installed in two ways: by rebasing from an existing Fedora Atomic system, or by installing from a bootable ISO. Choose the method that works best for you.
 
-### Step 1: Set up your local environment
+## Prerequisites
+
+Before installing Zirconium, make sure you have:
+
+- **For rebase method**: An existing Fedora Atomic-based system (Silverblue, Kinoite, Bluefin, Aurora, etc.)
+- **For ISO method**: A USB drive (4GB or larger) and a tool to create bootable media
+- **Hardware requirements**: 
+  - x86_64 (AMD64) or ARM64 CPU
+  - 4GB RAM minimum (8GB recommended)
+  - 25GB free disk space
+- **GPU compatibility**: 
+  - AMD/Intel GPUs work out of the box
+  - NVIDIA GTX 16xx or RTX series requires the `-nvidia` variant
+
+<Note>
+NVIDIA support requires disabling Secure Boot. The kernel module is currently unsigned. See the [GPU variants guide](/installation/gpu-variants) for details.
+</Note>
+
+## Installation methods
+
+<Tabs>
+  <Tab title="Rebase from Fedora Atomic">
+    
+    If you already have a Fedora Atomic system installed, rebasing to Zirconium is the fastest method.
+
+    <Steps>
+      <Step title="Open a terminal">
+        Launch your terminal application. You'll need to run commands with sudo privileges.
+      </Step>
+
+      <Step title="Run the bootc switch command">
+        For AMD/Intel GPUs:
+        
+        ```bash
+        sudo bootc switch ghcr.io/zirconium-dev/zirconium:latest
+        ```
+
+        For NVIDIA GPUs (GTX 16xx or RTX series):
+        
+        ```bash
+        sudo bootc switch ghcr.io/zirconium-dev/zirconium-nvidia:latest
+        ```
+
+        This command downloads the Zirconium container image and prepares it as your next boot target.
+      </Step>
+
+      <Step title="Reboot your system">
+        Once the switch completes, reboot to start using Zirconium:
+        
+        ```bash
+        systemctl reboot
+        ```
+      </Step>
+
+      <Step title="Log in and enjoy">
+        After rebooting, you'll be greeted by the DankMaterialShell greeter. Log in to experience your new Niri-powered desktop.
+      </Step>
+    </Steps>
+
+    <Note>
+    The rebase preserves your home directory and user data. Your previous system remains available as a rollback option in the boot menu.
+    </Note>
+
+  </Tab>
+  <Tab title="ISO installation">
+    
+    For fresh installations or systems not running Fedora Atomic, use the Zirconium ISO.
+
+    <Steps>
+      <Step title="Download the ISO">
+        Choose the ISO for your hardware:
+
+        **AMD64 (x86_64)**
+        - [AMD/Intel GPUs](https://isos.zirconium.gay/zirconium-isos/zirconium-amd64.iso) ([Checksum](https://isos.zirconium.gay/zirconium-isos/zirconium-amd64.iso-CHECKSUM))
+        - [NVIDIA GPUs](https://isos.zirconium.gay/zirconium-isos/zirconium-nvidia-amd64.iso) ([Checksum](https://isos.zirconium.gay/zirconium-isos/zirconium-nvidia-amd64.iso-CHECKSUM))
+
+        **ARM64**
+        - [AMD/Intel GPUs](https://isos.zirconium.gay/zirconium-isos/zirconium-arm64.iso) ([Checksum](https://isos.zirconium.gay/zirconium-isos/zirconium-arm64.iso-CHECKSUM))
+        - [NVIDIA GPUs](https://isos.zirconium.gay/zirconium-isos/zirconium-nvidia-arm64.iso) ([Checksum](https://isos.zirconium.gay/zirconium-isos/zirconium-nvidia-arm64.iso-CHECKSUM))
+      </Step>
+
+      <Step title="Verify the checksum (optional but recommended)">
+        Verify the integrity of your download:
+        
+        ```bash
+        sha256sum -c zirconium-*.iso-CHECKSUM
+        ```
+      </Step>
+
+      <Step title="Create bootable media">
+        Use a tool like Fedora Media Writer, Rufus (Windows), or `dd` to create a bootable USB drive:
+        
+        ```bash
+        # Example with dd (Linux)
+        sudo dd if=zirconium-amd64.iso of=/dev/sdX bs=4M status=progress
+        ```
+
+        <Warning>
+        Replace `/dev/sdX` with your USB drive's device path. This will erase all data on the drive.
+        </Warning>
+      </Step>
+
+      <Step title="Boot from the USB drive">
+        Restart your computer and boot from the USB drive. You may need to adjust your BIOS/UEFI boot order or use a boot menu key (usually F12, F2, or Del).
+      </Step>
+
+      <Step title="Follow the installation wizard">
+        The Anaconda installer will guide you through:
+        - Disk partitioning
+        - User account creation
+        - Network configuration
+        - Timezone settings
+
+        The installer will automatically run this bootc command during installation:
+        
+        ```bash
+        bootc switch --mutate-in-place --transport registry \
+          ghcr.io/zirconium-dev/zirconium:latest
+        ```
+      </Step>
+
+      <Step title="Reboot and log in">
+        After installation completes, remove the USB drive and reboot. You'll be greeted by DankMaterialShell.
+      </Step>
+    </Steps>
+
+  </Tab>
+</Tabs>
+
+## First steps after installation
+
+Once you've logged into Zirconium, here's what to do next:
+
+<Steps>
+  <Step title="Learn the Niri basics">
+    Niri uses a scrollable tiling layout. Some essential keybindings:
+    
+    - `Super + Enter`: Open terminal
+    - `Super + D`: Application launcher
+    - `Super + Q`: Close window
+    - `Super + H/L`: Navigate between windows
+    - `Super + Shift + H/L`: Move windows
+    
+    See the [Niri configuration guide](/configuration/niri) for a complete list of keybindings.
+  </Step>
+
+  <Step title="Install applications">
+    Zirconium supports multiple package management methods:
+    
+    - **Flatpak** (recommended for GUI apps): `flatpak install flathub <app>`
+    - **Homebrew** (for CLI tools): `brew install <package>`
+    - **Layering** (for system packages): `rpm-ostree install <package>`
+    
+    Learn more in the [operations maintenance guide](/operations/maintenance).
+  </Step>
+
+  <Step title="Customize your setup">
+    Niri and DankMaterialShell configurations live in:
+    
+    - `~/.config/niri/config.kdl`: Niri window manager settings
+    - `~/.config/dms/`: DankMaterialShell configuration
+    
+    Consider using `chezmoi` (pre-installed) to manage your dotfiles across systems.
+  </Step>
+
+  <Step title="Join the community">
+    Get help, share your setup, and contribute:
+    
+    - [Discord server](https://discord.gg/mmgNQpxwhW)
+    - [GitHub repository](https://github.com/zirconium-dev/zirconium)
+    - [Report issues](https://github.com/zirconium-dev/zirconium/issues)
+  </Step>
+</Steps>
+
+## Troubleshooting
 
 <AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
+  <Accordion title="System won't boot after rebase">
+    If Zirconium fails to boot, you can roll back to your previous system:
     
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
+    1. At the GRUB boot menu, select the previous deployment
+    2. Once booted, pin your working deployment:
+       ```bash
+       sudo ostree admin pin 0
+       ```
+    3. Report the issue on [GitHub](https://github.com/zirconium-dev/zirconium/issues)
   </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
+
+  <Accordion title="NVIDIA drivers not working">
+    Ensure you:
     
-    <Tip>Your preview updates automatically as you edit files.</Tip>
+    1. Used the `-nvidia` variant image
+    2. Disabled Secure Boot in your BIOS/UEFI
+    3. Rebooted after the initial installation
+    
+    Check driver status:
+    ```bash
+    lsmod | grep nvidia
+    nvidia-smi
+    ```
+  </Accordion>
+
+  <Accordion title="Display not working on ARM64">
+    ARM64 support varies by hardware. Check:
+    
+    1. Your device is using a supported SoC
+    2. Required firmware is present in `/lib/firmware`
+    3. Kernel messages for errors: `dmesg | grep -i display`
   </Accordion>
 </AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
 
 ## Next steps
 
-Now that you have your docs running, explore these key features:
-
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="ISO installation" icon="compact-disc" href="/installation/iso">
+    Install from a bootable ISO image
+  </Card>
+  <Card title="GPU variants" icon="microchip" href="/installation/gpu-variants">
+    Choose the right image for your GPU
+  </Card>
+  <Card title="Configuration" icon="sliders" href="/configuration/niri">
+    Customize Niri and DankMaterialShell
+  </Card>
+  <Card title="Building custom images" icon="hammer" href="/building/overview">
+    Build your own customized Zirconium image
+  </Card>
 </CardGroup>
-
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>

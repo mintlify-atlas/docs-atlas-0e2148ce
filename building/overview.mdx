@@ -1,0 +1,136 @@
+---
+title: Build system overview
+description: Understanding Zirconium's bootc-based build architecture and image layers
+---
+
+## Architecture
+
+Zirconium uses a modern bootc-based container build system that creates immutable OS images. The build process leverages containerization to ensure reproducible, atomic system images that can be deployed across different environments.
+
+### Base image
+
+Zirconium is built on top of Fedora's official bootc base image:
+
+```dockerfile
+FROM quay.io/fedora/fedora-bootc:44
+```
+
+This provides a minimal, bootable container image based on Fedora 44, which serves as the foundation for all Zirconium customizations.
+
+### Build context
+
+The build uses a multi-stage approach with a dedicated context stage that assembles all build resources:
+
+```dockerfile
+FROM scratch AS ctx
+
+COPY assets /assets
+COPY build_files /build
+COPY system_files /files
+COPY cosign.pub /files/usr/share/pki/containers/zirconium.pub
+```
+
+This context stage mounts into each build layer, providing access to:
+- **assets**: Logos, wallpapers, and visual resources
+- **build_files**: Build scripts organized by phase
+- **system_files**: Configuration files to be installed in the final image
+- **cosign.pub**: Container signing verification key
+
+## Build layers
+
+The build process is organized into distinct layers, each executed as a separate RUN instruction with specific mount configurations:
+
+<Steps>
+  <Step title="Base layer">
+    Removes unnecessary packages and installs core system dependencies
+    - **00-base-pre.sh**: Removes unwanted packages (chrony, sssd, qemu-user-static, toolbox)
+    - **00-base-fetch.sh**: Installs NetworkManager, firmware, hardware support, and utilities
+    - **00-base-post.sh**: Copies system files and configures systemd services
+  </Step>
+
+  <Step title="Theme layer">
+    Installs Niri window manager, DankMaterialShell, and desktop components
+    - **01-theme-fetch.sh**: Installs Niri, QuickShell, DMS, fonts, and desktop applications
+    - **01-theme-post.sh**: Configures user services, installs assets, and sets up shell completion
+  </Step>
+
+  <Step title="NVIDIA layer">
+    Adds NVIDIA driver support for systems with NVIDIA graphics (conditional)
+    - **02-nvidia-fetch.sh**: Installs NVIDIA drivers and DKMS modules
+    - **02-nvidia-post.sh**: Builds kernel modules and configures driver loading
+  </Step>
+
+  <Step title="Miscellaneous layer">
+    Finalizes the system configuration
+    - **99-misc-fetch.sh**: Adds Flathub repository configuration
+    - **99-misc-post.sh**: Customizes OS branding and creates symlinks
+  </Step>
+
+  <Step title="Initramfs generation">
+    Builds the boot image
+    - **99-dracut.sh**: Generates reproducible initramfs with ostree support
+  </Step>
+</Steps>
+
+## Build flavors
+
+Zirconium supports multiple build flavors controlled by the `BUILD_FLAVOR` argument:
+
+<CodeGroup>
+
+```bash Standard build
+podman build -t zirconium:latest .
+```
+
+```bash NVIDIA build
+podman build --build-arg BUILD_FLAVOR=nvidia -t zirconium:nvidia .
+```
+
+</CodeGroup>
+
+### Standard flavor
+
+The default build includes:
+- Niri window manager
+- DankMaterialShell UI
+- Full desktop application suite
+- Intel/AMD graphics support
+
+### NVIDIA flavor
+
+When `BUILD_FLAVOR` contains "nvidia", the build additionally includes:
+- NVIDIA proprietary drivers from Terra repository
+- DKMS kernel module compilation
+- CUDA support libraries
+- Nouveau driver blacklisting
+- Container toolkit for GPU passthrough
+
+<Note>
+  The NVIDIA layer scripts check `BUILD_FLAVOR` and exit early if NVIDIA support is not requested, keeping the standard build lightweight.
+</Note>
+
+## Mount configurations
+
+Each build layer uses specific mount types for efficiency and security:
+
+- **bind mount**: Provides read-only access to the build context (`/ctx`)
+- **tmpfs**: Creates temporary filesystems for `/var`, `/tmp`, `/run`, `/boot`
+- **cache**: Persists package manager cache across builds (`/var/cache/libdnf5`)
+- **network=none**: Most layers run without network access for reproducibility
+
+<Tip>
+  The cache mount for `/var/cache/libdnf5` significantly speeds up rebuilds by preserving downloaded packages between builds.
+</Tip>
+
+## Final cleanup
+
+The build concludes with cleanup and validation:
+
+```dockerfile
+RUN rm -rf /var/* && mkdir /var/tmp && bootc container lint
+```
+
+This ensures:
+- No leftover files in `/var`
+- Compliance with bootc container requirements
+- Image is ready for bootc deployment

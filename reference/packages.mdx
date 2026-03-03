@@ -1,0 +1,441 @@
+---
+title: Packages
+description: Comprehensive list of packages installed in Zirconium
+---
+
+Zirconium installs a curated set of packages to provide a complete desktop experience with the Niri window manager and DankMaterialShell.
+
+## Package sources
+
+Packages are installed from multiple sources:
+
+- **Fedora repositories** - Standard Fedora package set
+- **COPR repositories** - Community-maintained packages
+- **Terra repository** - Additional desktop packages and fonts
+- **Negativo17** - Multimedia codecs
+
+## COPR repositories
+
+The following COPR repositories are used during installation:
+
+<ParamField path="ublue-os/packages">
+  Universal Blue packages including the `uupd` update manager
+</ParamField>
+
+<ParamField path="zirconium/packages">
+  Zirconium-specific packages:
+  - `matugen` - Material Design color generation
+  - `iio-niri` - Automatic screen rotation for Niri
+  - `valent-git` - Device integration
+</ParamField>
+
+<ParamField path="yalter/niri-git">
+  Development builds of the Niri window manager
+  
+  **Priority:** 1 (highest) to ensure latest niri version is used
+</ParamField>
+
+<ParamField path="avengemedia/danklinux">
+  DankLinux packages:
+  - `quickshell-git` - Qt-based shell scripting environment
+</ParamField>
+
+<ParamField path="avengemedia/dms-git">
+  DankMaterialShell and related tools:
+  - `dms` - Main shell package
+  - `dms-cli` - Command-line interface
+  - `dms-greeter` - Login screen greeter
+  - `dgop` - Graphical operations panel
+  - `dsearch` - Application launcher
+</ParamField>
+
+## Base system packages
+
+Installed from `00-base-fetch.sh`.
+
+### Networking
+
+<Accordion title="NetworkManager and plugins">
+```
+NetworkManager
+NetworkManager-adsl
+NetworkManager-bluetooth
+NetworkManager-config-connectivity-fedora
+NetworkManager-libnm
+NetworkManager-openconnect
+NetworkManager-openvpn
+NetworkManager-strongswan
+NetworkManager-ssh
+NetworkManager-ssh-selinux
+NetworkManager-vpnc
+NetworkManager-wifi
+NetworkManager-wwan
+```
+
+Complete networking stack with VPN support (OpenVPN, WireGuard, OpenConnect, Strongswan, VPNC).
+</Accordion>
+
+### Hardware support
+
+<Accordion title="Firmware packages">
+```
+alsa-firmware
+alsa-sof-firmware
+alsa-tools-firmware
+atheros-firmware
+brcmfmac-firmware
+intel-audio-firmware
+iwlegacy-firmware
+iwlwifi-dvm-firmware
+iwlwifi-mvm-firmware
+mt7xxx-firmware
+nxpwireless-firmware
+realtek-firmware
+tiwilink-firmware
+```
+
+Comprehensive firmware support for audio, WiFi, and Bluetooth devices.
+</Accordion>
+
+<Accordion title="Virtualization guests">
+```
+hyperv-daemons          # Hyper-V integration
+open-vm-tools           # VMware support
+open-vm-tools-desktop
+qemu-guest-agent        # QEMU/KVM support
+spice-vdagent           # SPICE display
+virtualbox-guest-additions  # VirtualBox (x86_64 only)
+```
+</Accordion>
+
+<Accordion title="Hardware utilities">
+```
+fprintd                 # Fingerprint reader
+fprintd-pam
+libratbag-ratbagd       # Gaming mouse configuration
+thermald                # Thermal management (x86_64 only)
+powerstat               # Power monitoring (x86_64 only)
+switcheroo-control      # Hybrid graphics
+steam-devices           # Steam hardware support
+```
+</Accordion>
+
+### System utilities
+
+```
+audit
+audispd-plugins
+cifs-utils              # SMB/CIFS support
+cups                    # Printing
+cups-pk-helper
+firewalld               # Firewall
+fuse
+fuse-common
+fwupd                   # Firmware updates
+gum                     # Interactive shell utilities
+kernel-modules-extra
+man-db
+man-pages
+plymouth                # Boot splash
+plymouth-system-theme
+rsync
+systemd-container
+systemd-oomd-defaults
+tuned                   # Performance tuning
+tuned-ppd
+unzip
+whois
+wireguard-tools
+zram-generator-defaults
+```
+
+### Storage and filesystems
+
+```
+gvfs-archive            # Archive mounting
+gvfs-mtp                # Android MTP
+gvfs-nfs                # Network filesystem
+gvfs-smb                # Samba shares
+ifuse                   # iOS device mounting
+jmtpfs                  # JMTP filesystem
+libimobiledevice        # iOS support
+libimobiledevice-utils
+```
+
+### Printing
+
+```
+dymo-cups-drivers
+hplip                   # HP printer support
+printer-driver-brlaser  # Brother laser printers
+ptouch-driver           # Brother P-Touch label printers
+system-config-printer-libs
+system-config-printer-udev
+```
+
+### Security
+
+```
+pam_yubico              # YubiKey authentication
+pcsc-lite               # Smart card support
+```
+
+### Media
+
+```
+libcamera
+libcamera-v4l2
+libcamera-gstreamer
+libcamera-tools
+uxplay                  # AirPlay server
+```
+
+### Other utilities
+
+```
+uupd                    # Universal Blue update manager
+```
+
+## Desktop environment packages
+
+Installed from `01-theme-fetch.sh`.
+
+### Window manager and shell
+
+<Accordion title="Niri and DankMaterialShell">
+```
+niri                    # Scrollable tiling Wayland compositor
+dms                     # DankMaterialShell
+dms-cli                 # DMS command-line tools
+dms-greeter             # DMS login greeter
+dgop                    # DMS graphical operations panel
+dsearch                 # DMS application launcher
+quickshell-git          # Shell scripting framework
+```
+
+**Note:** Niri is installed from the `yalter/niri-git` COPR with development builds. The version is verified to contain git hash information.
+</Accordion>
+
+### Wayland and display
+
+```
+greetd                  # Display manager
+greetd-selinux
+xwayland-satellite      # Rootful XWayland
+wl-clipboard            # Wayland clipboard utilities
+wl-mirror               # Screen mirroring
+```
+
+### Desktop portals
+
+```
+xdg-desktop-portal-gnome
+xdg-desktop-portal-gtk
+xdg-terminal-exec       # Terminal launcher
+xdg-user-dirs           # User directories
+```
+
+### File manager
+
+```
+nautilus
+nautilus-python
+glycin-thumbnailer      # Image thumbnails
+```
+
+The xdg-terminal-exec-nautilus extension is installed from GitHub to enable proper terminal integration.
+
+### Utilities and tools
+
+<Accordion title="System utilities">
+```
+brightnessctl           # Brightness control
+cava                    # Audio visualizer
+chezmoi                 # Dotfile manager
+ddcutil                 # Monitor control via DDC
+fastfetch               # System information
+hyfetch                 # Neofetch alternative with pride flags
+input-remapper          # Input device remapping
+just                    # Command runner
+playerctl               # Media player control
+udiskie                 # Automount daemon
+wtype                   # Wayland keyboard input
+```
+</Accordion>
+
+<Accordion title="Authentication and security">
+```
+fcitx5-mozc             # Japanese input method
+gnome-disk-utility
+gnome-keyring
+gnome-keyring-pam
+gcr                     # Certificate/key management
+gnupg2-scdaemon         # Smart card support
+openssh-askpass
+orca                    # Screen reader
+ykman                   # YubiKey manager
+```
+</Accordion>
+
+<Accordion title="Development and CLI">
+```
+fpaste                  # Fedora pastebin
+fzf                     # Fuzzy finder
+git-core
+khal                    # Calendar
+```
+</Accordion>
+
+### Audio and video
+
+```
+pipewire
+wireplumber
+kf6-kimageformats       # Image format support
+webp-pixbuf-loader      # WebP support
+qt6-qtmultimedia        # Qt multimedia
+```
+
+### Qt theming
+
+```
+kf6-kirigami            # KDE framework
+qt6ct                   # Qt6 configuration
+plasma-breeze           # Breeze theme
+kf6-qqc2-desktop-style  # QQC2 desktop style
+```
+
+Installed with `install_weak_deps=False` to minimize dependencies.
+
+### Multimedia codecs
+
+From the **Negativo17 multimedia repository**:
+
+```
+ffmpeg
+libavcodec
+gstreamer1-plugins-bad-free
+gstreamer1-plugins-bad-free-libs
+gstreamer1-plugins-good
+gstreamer1-plugins-base
+lame
+lame-libs
+libjxl
+ffmpegthumbnailer       # Video thumbnails
+```
+
+### Fonts
+
+<Accordion title="Font packages">
+```
+default-fonts-core-emoji
+google-noto-color-emoji-fonts
+google-noto-emoji-fonts
+glibc-all-langpacks
+default-fonts
+maple-fonts             # From Terra repository
+```
+
+Maple Fonts provide programming ligatures and Chinese/Japanese support.
+</Accordion>
+
+### Other packages
+
+```
+flatpak                 # Flatpak support
+matugen                 # Material color generation
+iio-niri                # Auto-rotation support
+valent-git              # Device sync
+tailscale               # VPN mesh network
+steam-devices           # Gaming device support
+```
+
+### Third-party installations
+
+<Accordion title="zdots">
+Zirconium default dotfiles cloned from:
+```
+https://github.com/zirconium-dev/zdots.git
+```
+Installed to: `/usr/share/zirconium/zdots`
+</Accordion>
+
+<Accordion title="Terra releases">
+```
+terra-release           # Base Terra repository
+terra-release-extras    # Extra Terra packages
+```
+
+Installed with `--nogpgcheck` and disabled by default. Enabled selectively for specific packages.
+</Accordion>
+
+## NVIDIA-specific packages
+
+Installed from `02-nvidia-fetch.sh` when `BUILD_FLAVOR=nvidia`.
+
+### Build dependencies
+
+```
+gcc-c++                 # Required for DKMS builds
+```
+
+### NVIDIA driver stack
+
+From **Terra NVIDIA repository**:
+
+<Accordion title="Core driver packages">
+```
+dkms-nvidia             # NVIDIA kernel modules via DKMS
+nvidia-driver-cuda      # CUDA support
+libnvidia-fbc           # Frame buffer capture
+libva-nvidia-driver     # VA-API support
+nvidia-driver           # Main driver
+nvidia-modprobe         # Module loading
+nvidia-persistenced     # Persistence daemon
+nvidia-settings         # Configuration GUI
+nvidia-container-toolkit # Container support
+```
+
+**Note:** `nvidia-container-toolkit` is initially excluded, then installed separately to work around dependency issues.
+</Accordion>
+
+### NVIDIA build patches
+
+For NVIDIA driver version 590.48.01, a kernel 6.19 compatibility patch is applied from CachyOS:
+
+```bash
+https://raw.githubusercontent.com/CachyOS/CachyOS-PKGBUILDS/refs/heads/master/nvidia/nvidia-utils/kernel-6.19.patch
+```
+
+### SELinux policy
+
+NVIDIA container SELinux policy is installed:
+
+```bash
+https://raw.githubusercontent.com/NVIDIA/dgx-selinux/master/bin/RHEL9/nvidia-container.pp
+```
+
+## Flatpak
+
+Flathub repository is pre-configured:
+
+- Repository file: `/usr/share/flatpak/remotes.d/flathub.flatpakrepo`
+- Auto-installed on first boot via `flatpak-preinstall.service`
+- Pre-installation list: `/usr/share/flatpak/preinstall.d/zirconium.preinstall`
+
+## Package exclusions
+
+The following packages are explicitly excluded:
+
+```
+PackageKit*             # Conflicts with manual package management
+```
+
+## Removed documentation
+
+To reduce image size, documentation is removed for:
+
+```
+/usr/share/doc/niri
+/usr/share/doc/just
+```
