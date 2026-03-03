@@ -11,7 +11,7 @@ All system files are located in `system_files/` in the source tree and are copie
 
 System files are organized following the Filesystem Hierarchy Standard (FHS):
 
-```
+```text
 system_files/
 ├── etc/                    # System configuration
 │   ├── containers/         # Container registry configuration
@@ -64,7 +64,7 @@ Container registry configuration for Zirconium development images with signature
 
 Defines the default terminal emulator for XDG terminal launching:
 
-```
+```text
 foot
 ```
 
@@ -133,7 +133,7 @@ fi
 ```
 
 Can be disabled by running `zjust toggle-user-motd` or creating:
-```
+```text
 ~/.config/zirconium/no-show-user-motd
 ```
 
@@ -264,7 +264,7 @@ Located in `/usr/lib/systemd/user/`:
 
 `/usr/lib/systemd/system-preset/01-zirconium.preset`:
 
-```
+```text
 enable auditd.service
 enable bootc-fetch-apply-updates.timer
 enable brew-setup.service
@@ -283,7 +283,7 @@ enable uupd.timer
 
 `/usr/lib/systemd/user-preset/01-zirconium.preset`:
 
-```
+```text
 enable chezmoi-init.service
 enable chezmoi-update.timer
 enable dms.service

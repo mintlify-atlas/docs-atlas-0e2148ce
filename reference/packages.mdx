@@ -56,7 +56,7 @@ Installed from `00-base-fetch.sh`.
 ### Networking
 
 <Accordion title="NetworkManager and plugins">
-```
+```text
 NetworkManager
 NetworkManager-adsl
 NetworkManager-bluetooth
@@ -78,7 +78,7 @@ Complete networking stack with VPN support (OpenVPN, WireGuard, OpenConnect, Str
 ### Hardware support
 
 <Accordion title="Firmware packages">
-```
+```text
 alsa-firmware
 alsa-sof-firmware
 alsa-tools-firmware
@@ -98,7 +98,7 @@ Comprehensive firmware support for audio, WiFi, and Bluetooth devices.
 </Accordion>
 
 <Accordion title="Virtualization guests">
-```
+```text
 hyperv-daemons          # Hyper-V integration
 open-vm-tools           # VMware support
 open-vm-tools-desktop
@@ -109,7 +109,7 @@ virtualbox-guest-additions  # VirtualBox (x86_64 only)
 </Accordion>
 
 <Accordion title="Hardware utilities">
-```
+```text
 fprintd                 # Fingerprint reader
 fprintd-pam
 libratbag-ratbagd       # Gaming mouse configuration
@@ -122,7 +122,7 @@ steam-devices           # Steam hardware support
 
 ### System utilities
 
-```
+```text
 audit
 audispd-plugins
 cifs-utils              # SMB/CIFS support
@@ -151,7 +151,7 @@ zram-generator-defaults
 
 ### Storage and filesystems
 
-```
+```text
 gvfs-archive            # Archive mounting
 gvfs-mtp                # Android MTP
 gvfs-nfs                # Network filesystem
@@ -164,7 +164,7 @@ libimobiledevice-utils
 
 ### Printing
 
-```
+```text
 dymo-cups-drivers
 hplip                   # HP printer support
 printer-driver-brlaser  # Brother laser printers
@@ -175,14 +175,14 @@ system-config-printer-udev
 
 ### Security
 
-```
+```text
 pam_yubico              # YubiKey authentication
 pcsc-lite               # Smart card support
 ```
 
 ### Media
 
-```
+```text
 libcamera
 libcamera-v4l2
 libcamera-gstreamer
@@ -192,7 +192,7 @@ uxplay                  # AirPlay server
 
 ### Other utilities
 
-```
+```text
 uupd                    # Universal Blue update manager
 ```
 
@@ -203,7 +203,7 @@ Installed from `01-theme-fetch.sh`.
 ### Window manager and shell
 
 <Accordion title="Niri and DankMaterialShell">
-```
+```text
 niri                    # Scrollable tiling Wayland compositor
 dms                     # DankMaterialShell
 dms-cli                 # DMS command-line tools
@@ -218,7 +218,7 @@ quickshell-git          # Shell scripting framework
 
 ### Wayland and display
 
-```
+```text
 greetd                  # Display manager
 greetd-selinux
 xwayland-satellite      # Rootful XWayland
@@ -228,7 +228,7 @@ wl-mirror               # Screen mirroring
 
 ### Desktop portals
 
-```
+```text
 xdg-desktop-portal-gnome
 xdg-desktop-portal-gtk
 xdg-terminal-exec       # Terminal launcher
@@ -237,7 +237,7 @@ xdg-user-dirs           # User directories
 
 ### File manager
 
-```
+```text
 nautilus
 nautilus-python
 glycin-thumbnailer      # Image thumbnails
@@ -248,7 +248,7 @@ The xdg-terminal-exec-nautilus extension is installed from GitHub to enable prop
 ### Utilities and tools
 
 <Accordion title="System utilities">
-```
+```text
 brightnessctl           # Brightness control
 cava                    # Audio visualizer
 chezmoi                 # Dotfile manager
@@ -264,7 +264,7 @@ wtype                   # Wayland keyboard input
 </Accordion>
 
 <Accordion title="Authentication and security">
-```
+```text
 fcitx5-mozc             # Japanese input method
 gnome-disk-utility
 gnome-keyring
@@ -278,7 +278,7 @@ ykman                   # YubiKey manager
 </Accordion>
 
 <Accordion title="Development and CLI">
-```
+```text
 fpaste                  # Fedora pastebin
 fzf                     # Fuzzy finder
 git-core
@@ -288,7 +288,7 @@ khal                    # Calendar
 
 ### Audio and video
 
-```
+```text
 pipewire
 wireplumber
 kf6-kimageformats       # Image format support
@@ -298,7 +298,7 @@ qt6-qtmultimedia        # Qt multimedia
 
 ### Qt theming
 
-```
+```text
 kf6-kirigami            # KDE framework
 qt6ct                   # Qt6 configuration
 plasma-breeze           # Breeze theme
@@ -311,7 +311,7 @@ Installed with `install_weak_deps=False` to minimize dependencies.
 
 From the **Negativo17 multimedia repository**:
 
-```
+```text
 ffmpeg
 libavcodec
 gstreamer1-plugins-bad-free
@@ -327,7 +327,7 @@ ffmpegthumbnailer       # Video thumbnails
 ### Fonts
 
 <Accordion title="Font packages">
-```
+```text
 default-fonts-core-emoji
 google-noto-color-emoji-fonts
 google-noto-emoji-fonts
@@ -341,7 +341,7 @@ Maple Fonts provide programming ligatures and Chinese/Japanese support.
 
 ### Other packages
 
-```
+```text
 flatpak                 # Flatpak support
 matugen                 # Material color generation
 iio-niri                # Auto-rotation support
@@ -354,14 +354,14 @@ steam-devices           # Gaming device support
 
 <Accordion title="zdots">
 Zirconium default dotfiles cloned from:
-```
+```text
 https://github.com/zirconium-dev/zdots.git
 ```
 Installed to: `/usr/share/zirconium/zdots`
 </Accordion>
 
 <Accordion title="Terra releases">
-```
+```text
 terra-release           # Base Terra repository
 terra-release-extras    # Extra Terra packages
 ```
@@ -375,7 +375,7 @@ Installed from `02-nvidia-fetch.sh` when `BUILD_FLAVOR=nvidia`.
 
 ### Build dependencies
 
-```
+```text
 gcc-c++                 # Required for DKMS builds
 ```
 
@@ -384,7 +384,7 @@ gcc-c++                 # Required for DKMS builds
 From **Terra NVIDIA repository**:
 
 <Accordion title="Core driver packages">
-```
+```text
 dkms-nvidia             # NVIDIA kernel modules via DKMS
 nvidia-driver-cuda      # CUDA support
 libnvidia-fbc           # Frame buffer capture
@@ -427,7 +427,7 @@ Flathub repository is pre-configured:
 
 The following packages are explicitly excluded:
 
-```
+```text
 PackageKit*             # Conflicts with manual package management
 ```
 
@@ -435,7 +435,7 @@ PackageKit*             # Conflicts with manual package management
 
 To reduce image size, documentation is removed for:
 
-```
+```text
 /usr/share/doc/niri
 /usr/share/doc/just
 ```
